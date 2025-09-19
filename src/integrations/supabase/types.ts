@@ -338,6 +338,260 @@ export type Database = {
           },
         ]
       }
+      auth_audit: {
+        Row: {
+          acao: string
+          created_at: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          id: string
+          ip_address: unknown | null
+          modulo: string
+          nivel: string
+          origem: string
+          recurso_id: string | null
+          recurso_tipo: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          modulo: string
+          nivel?: string
+          origem?: string
+          recurso_id?: string | null
+          recurso_tipo?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          modulo?: string
+          nivel?: string
+          origem?: string
+          recurso_id?: string | null
+          recurso_tipo?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      auth_permission: {
+        Row: {
+          acao: string
+          created_at: string
+          descricao: string | null
+          id: string
+          modulo: string
+          nome: string
+          sistema: boolean
+          updated_at: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          modulo: string
+          nome: string
+          sistema?: boolean
+          updated_at?: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          modulo?: string
+          nome?: string
+          sistema?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      auth_profile: {
+        Row: {
+          api_tokens: Json | null
+          avatar_url: string | null
+          cargo: string | null
+          created_at: string
+          departamento: string | null
+          distribuidor: string | null
+          email: string
+          id: string
+          nome: string
+          status: string
+          telefone: string | null
+          time_id: string | null
+          two_factor_enabled: boolean
+          ultimo_login: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_tokens?: Json | null
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          departamento?: string | null
+          distribuidor?: string | null
+          email: string
+          id?: string
+          nome: string
+          status?: string
+          telefone?: string | null
+          time_id?: string | null
+          two_factor_enabled?: boolean
+          ultimo_login?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_tokens?: Json | null
+          avatar_url?: string | null
+          cargo?: string | null
+          created_at?: string
+          departamento?: string | null
+          distribuidor?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          status?: string
+          telefone?: string | null
+          time_id?: string | null
+          two_factor_enabled?: boolean
+          ultimo_login?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      auth_role: {
+        Row: {
+          ativo: boolean
+          cor: string | null
+          created_at: string
+          descricao: string | null
+          distribuidor: string | null
+          id: string
+          nome: string
+          sistema: boolean
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          distribuidor?: string | null
+          id?: string
+          nome: string
+          sistema?: boolean
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          distribuidor?: string | null
+          id?: string
+          nome?: string
+          sistema?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      auth_role_permission: {
+        Row: {
+          concedida: boolean
+          created_at: string
+          id: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          concedida?: boolean
+          created_at?: string
+          id?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          concedida?: boolean
+          created_at?: string
+          id?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_role_permission_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "auth_permission"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auth_role_permission_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "auth_role"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auth_user_role: {
+        Row: {
+          ativo: boolean
+          concedido_por: string | null
+          created_at: string
+          data_concessao: string
+          data_expiracao: string | null
+          id: string
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          concedido_por?: string | null
+          created_at?: string
+          data_concessao?: string
+          data_expiracao?: string | null
+          id?: string
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          concedido_por?: string | null
+          created_at?: string
+          data_concessao?: string
+          data_expiracao?: string | null
+          id?: string
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_user_role_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "auth_role"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backup_logs: {
         Row: {
           backup_path: string | null
@@ -2851,6 +3105,14 @@ export type Database = {
       }
       leader_has_promoter_access: {
         Args: { _promoter_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: { permission_name: string; user_id: string }
+        Returns: boolean
+      }
+      user_is_admin: {
+        Args: { user_id?: string }
         Returns: boolean
       }
     }
