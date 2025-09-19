@@ -42,28 +42,44 @@ const Audit = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Buscar logs de auditoria
+      const { data: auditData, error: auditError } = await supabase
         .from('auth_audit')
-        .select(`
-          *,
-          auth_profile:user_id (
-            nome,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (auditError) throw auditError;
 
-      setLogs((data || []).map(log => ({
-        ...log,
-        ip_address: log.ip_address as string || null,
-        user_agent: log.user_agent as string || null,
-        auth_profile: log.auth_profile && typeof log.auth_profile === 'object' && !Array.isArray(log.auth_profile) && 'nome' in log.auth_profile 
-          ? log.auth_profile as { nome: string; email: string }
-          : undefined
-      })));
+      // Buscar perfis dos usuários que aparecem nos logs
+      const userIds = [...new Set(auditData?.map(log => log.user_id).filter(Boolean) || [])];
+      
+      let profilesData: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('auth_profile')
+          .select('user_id, nome, email')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.warn('Error fetching user profiles:', profilesError);
+        } else {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Combinar dados
+      const logsWithProfiles = (auditData || []).map(log => {
+        const profile = profilesData.find(p => p.user_id === log.user_id);
+        return {
+          ...log,
+          ip_address: log.ip_address as string || null,
+          user_agent: log.user_agent as string || null,
+          auth_profile: profile ? { nome: profile.nome, email: profile.email } : undefined
+        };
+      });
+
+      setLogs(logsWithProfiles);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       toast({
