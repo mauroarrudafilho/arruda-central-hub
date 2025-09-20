@@ -1,5 +1,7 @@
-import { Users, Shield, Activity, User, LogOut } from 'lucide-react';
+import { Users, Shield, Activity, User, LogOut, Building2 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import * as Icons from 'lucide-react';
+import { useEffect } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,64 +13,113 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { useAuthState } from '@/hooks/useAuth';
-
-const menuItems = [
-  { title: 'Usuários', url: '/users', icon: Users },
-  { title: 'Papéis & Permissões', url: '/roles', icon: Shield },
-  { title: 'Auditoria', url: '/audit', icon: Activity },
-  { title: 'Meu Perfil', url: '/profile', icon: User },
-];
+import { useProjects, useProjectModules } from '@/hooks/useProjects';
+import { useProjectContext } from '@/contexts/ProjectContext';
+import { ProjectSelector } from '@/components/ProjectSelector';
 
 function AppSidebar() {
   const { state } = useSidebar();
   const { signOut, user } = useAuthState();
   const navigate = useNavigate();
+  const { projects, loading: projectsLoading } = useProjects();
+  const { currentProject, setCurrentProject, setProjects } = useProjectContext();
+  const { modules, loading: modulesLoading } = useProjectModules(currentProject?.id || null);
+
+  // Atualizar projetos no contexto quando carregados
+  useEffect(() => {
+    if (!projectsLoading && projects.length > 0) {
+      setProjects(projects);
+      
+      // Se não há projeto atual, selecionar o primeiro
+      if (!currentProject && projects.length > 0) {
+        setCurrentProject(projects[0]);
+      }
+    }
+  }, [projects, projectsLoading, currentProject, setProjects, setCurrentProject]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
+  // Mapa de ícones disponíveis
+  const iconMap: Record<string, React.ComponentType<any>> = {
+    Users,
+    Shield,
+    FileText: Activity,
+    User,
+    Building2,
+    LogOut,
+  };
+
+  // Função para obter ícone dinâmico
+  const getIcon = (iconName: string | null): React.ComponentType<any> => {
+    if (!iconName) return User;
+    
+    return iconMap[iconName] || User;
+  };
+
   const isCollapsed = state === 'collapsed';
 
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader>
+        {!isCollapsed && <ProjectSelector />}
+        {isCollapsed && (
+          <div className="p-2">
+            <Building2 className="h-4 w-4 mx-auto" />
+          </div>
+        )}
+      </SidebarHeader>
+      
       <SidebarContent>
-        <div className="p-4">
-          <h2 className={`font-bold text-sidebar-foreground ${isCollapsed ? 'hidden' : 'block'}`}>
-            Gestão de Usuários
-          </h2>
-        </div>
-        
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end 
-                      className={({ isActive }) => 
-                        isActive 
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-                          : 'hover:bg-sidebar-accent/50'
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {currentProject && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              {isCollapsed ? "•••" : currentProject.nome}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {modulesLoading ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    {isCollapsed ? "..." : "Carregando módulos..."}
+                  </div>
+                ) : modules.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    {isCollapsed ? "❌" : "Nenhum módulo disponível"}
+                  </div>
+                ) : (
+                  modules.map((module) => {
+                    const IconComponent = getIcon(module.icone);
+                    return (
+                      <SidebarMenuItem key={module.id}>
+                        <SidebarMenuButton asChild>
+                          <NavLink 
+                            to={module.rota}
+                            end
+                            className={({ isActive }) => 
+                              isActive 
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
+                                : 'hover:bg-sidebar-accent/50'
+                            }
+                          >
+                            <IconComponent className="h-4 w-4" />
+                            {!isCollapsed && <span>{module.nome}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <div className="mt-auto p-4">
           {!isCollapsed && (
@@ -96,6 +147,8 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
+  const { currentProject } = useProjectContext();
+  
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -106,7 +159,7 @@ export const Layout = ({ children }: LayoutProps) => {
             <SidebarTrigger />
             <div className="ml-4">
               <h1 className="text-lg font-semibold text-card-foreground">
-                Gestão de Usuários
+                {currentProject?.nome || "Sistema de Gestão"}
               </h1>
             </div>
           </header>

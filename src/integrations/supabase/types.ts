@@ -2479,6 +2479,83 @@ export type Database = {
         }
         Relationships: []
       }
+      project_modules: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number
+          project_id: string
+          rota: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          project_id: string
+          rota: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          project_id?: string
+          rota?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_modules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       promoters: {
         Row: {
           admission_date: string | null
@@ -2921,6 +2998,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_project_access: {
+        Row: {
+          concedido_por: string | null
+          created_at: string
+          id: string
+          nivel_acesso: Database["public"]["Enums"]["nivel_acesso"]
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concedido_por?: string | null
+          created_at?: string
+          id?: string
+          nivel_acesso?: Database["public"]["Enums"]["nivel_acesso"]
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concedido_por?: string | null
+          created_at?: string
+          id?: string
+          nivel_acesso?: Database["public"]["Enums"]["nivel_acesso"]
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_project_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -3076,6 +3191,17 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["acordo_papel"]
       }
+      get_user_projects: {
+        Args: { _user_id?: string }
+        Returns: {
+          descricao: string
+          id: string
+          nivel_acesso: Database["public"]["Enums"]["nivel_acesso"]
+          nome: string
+          slug: string
+          status: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id?: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -3109,6 +3235,10 @@ export type Database = {
       }
       user_has_permission: {
         Args: { permission_name: string; user_id: string }
+        Returns: boolean
+      }
+      user_has_project_access: {
+        Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       user_is_admin: {
