@@ -6,18 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUserDetails } from '@/hooks/useUserDetails';
-import { useProjects } from '@/hooks/useProjects';
+import { useAllProjects } from '@/hooks/useAllProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 
 const UserDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { userDetails, userRoles, userProjectAccess, loading, updateProjectAccess } = useUserDetails(id);
-  const { projects } = useProjects();
+  const { userDetails, userRoles, userProjectAccess, loading: userLoading, updateProjectAccess } = useUserDetails(id);
+  const { projects, loading: projectsLoading } = useAllProjects();
   const [updatingAccess, setUpdatingAccess] = useState<string | null>(null);
 
-  if (loading) {
+  if (userLoading || projectsLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -173,7 +173,7 @@ const UserDetail = () => {
             Acesso a Projetos
           </CardTitle>
           <CardDescription>
-            Gerencie o acesso do usuário aos projetos e defina níveis de permissão
+            Gerencie o acesso do usuário a todos os projetos disponíveis no sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -184,12 +184,21 @@ const UserDetail = () => {
               const isUpdating = updatingAccess === project.id;
 
               return (
-                <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <h4 className="font-medium">{project.nome}</h4>
+                <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{project.nome}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {project.slug}
+                      </Badge>
+                    </div>
                     {project.descricao && (
                       <p className="text-sm text-muted-foreground">{project.descricao}</p>
                     )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Building2 className="h-3 w-3" />
+                      Status: {project.status}
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
@@ -210,20 +219,28 @@ const UserDetail = () => {
                       </Select>
                     )}
                     
-                    <Switch
-                      checked={hasAccess}
-                      onCheckedChange={() => handleAccessToggle(project.id, hasAccess, access?.access_level || 'visualizador')}
-                      disabled={isUpdating}
-                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {hasAccess ? 'Ativo' : 'Inativo'}
+                      </span>
+                      <Switch
+                        checked={hasAccess}
+                        onCheckedChange={() => handleAccessToggle(project.id, hasAccess, access?.access_level || 'visualizador')}
+                        disabled={isUpdating}
+                      />
+                    </div>
                   </div>
                 </div>
               );
             })}
             
-            {projects.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum projeto disponível
-              </p>
+            {projects.length === 0 && !projectsLoading && (
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhum projeto disponível no sistema
+                </p>
+              </div>
             )}
           </div>
         </CardContent>
