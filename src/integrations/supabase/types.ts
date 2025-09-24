@@ -3191,6 +3191,17 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["acordo_papel"]
       }
+      get_user_basic_info: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          nome: string
+          status: string
+          ultimo_login: string
+          user_id: string
+        }[]
+      }
       get_user_projects: {
         Args: { _user_id?: string }
         Returns: {
@@ -3231,6 +3242,15 @@ export type Database = {
       }
       leader_has_promoter_access: {
         Args: { _promoter_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      update_user_project_access: {
+        Args: {
+          _access_level: Database["public"]["Enums"]["nivel_acesso"]
+          _grant_access: boolean
+          _project_id: string
+          _user_id: string
+        }
         Returns: boolean
       }
       user_has_permission: {

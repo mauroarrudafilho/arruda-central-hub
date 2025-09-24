@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Users from "./pages/Users";
+import UserDetail from "./pages/UserDetail";
 import Roles from "./pages/Roles";
 import Audit from "./pages/Audit";
 import Profile from "./pages/Profile";
@@ -36,6 +37,13 @@ const App = () => (
               <AuthGuard>
                 <Layout>
                   <Users />
+                </Layout>
+              </AuthGuard>
+            } />
+            <Route path="/users/:id" element={
+              <AuthGuard>
+                <Layout>
+                  <UserDetail />
                 </Layout>
               </AuthGuard>
             } />
