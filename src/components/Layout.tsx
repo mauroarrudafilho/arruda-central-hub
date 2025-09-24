@@ -69,12 +69,16 @@ function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        {!isCollapsed && <ProjectSelector />}
-        {isCollapsed && (
-          <div className="p-2">
+        <div className="p-4">
+          {!isCollapsed && (
+            <h2 className="text-lg font-semibold text-sidebar-foreground">
+              Sistema de Gestão
+            </h2>
+          )}
+          {isCollapsed && (
             <Building2 className="h-4 w-4 mx-auto" />
-          </div>
-        )}
+          )}
+        </div>
       </SidebarHeader>
       
       <SidebarContent>
