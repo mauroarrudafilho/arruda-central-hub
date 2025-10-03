@@ -1,0 +1,578 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Implementar Header Melhorado",
+        "description": "Desenvolver um header aprimorado com perfil de usuário, avatar, role, barra de busca e status de sessão, mantendo a identidade visual do Arruda Hub.",
+        "details": "Implementar o header usando React, TypeScript e Tailwind CSS com componentes shadcn/ui:\n\n1. Criar componente Header.tsx com subcomponentes:\n   - UserProfile: Exibir avatar, nome e role do usuário\n   - SearchBar: Implementar barra de busca para módulos\n   - SessionStatus: Mostrar status da sessão atual\n\n2. Aplicar a paleta de cores corporativa:\n   - Navy (#0A2342) como cor principal\n   - Detalhes em Teal\n   - Tipografia Inter\n\n3. Implementar responsividade com Tailwind:\n```tsx\nconst Header = () => {\n  return (\n    <header className=\"w-full bg-[#0A2342] text-white py-4 px-6 flex justify-between items-center\">\n      <div className=\"flex items-center gap-4\">\n        <Logo />\n        <SearchBar placeholder=\"Buscar módulos...\" />\n      </div>\n      <div className=\"flex items-center gap-4\">\n        <SessionStatus />\n        <UserProfile />\n      </div>\n    </header>\n  );\n};\n```\n\n4. Integrar com o sistema de autenticação existente para obter dados do usuário e status da sessão.",
+        "testStrategy": "1. Testes unitários para cada subcomponente do header usando React Testing Library\n2. Testes de integração para verificar a interação entre os componentes\n3. Testes de acessibilidade para garantir conformidade com WCAG AA\n4. Testes de responsividade em diferentes tamanhos de tela\n5. Verificação manual da fidelidade visual com o design system",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar componente base do Header e estrutura de layout",
+            "description": "Implementar o componente Header.tsx com a estrutura básica, incluindo o layout responsivo e a aplicação da paleta de cores corporativa.",
+            "dependencies": [],
+            "details": "Criar o arquivo Header.tsx com a estrutura básica usando Tailwind CSS:\n- Implementar o layout flexbox para posicionamento dos elementos\n- Aplicar a cor de fundo Navy (#0A2342) e texto branco\n- Configurar espaçamento interno (padding) e largura total\n- Implementar responsividade para diferentes tamanhos de tela\n- Importar e posicionar o componente Logo\n- Preparar os containers para os subcomponentes que serão implementados posteriormente",
+            "status": "done",
+            "testStrategy": "Verificar a renderização correta do componente base usando React Testing Library, testar a responsividade em diferentes breakpoints e confirmar a aplicação correta das cores corporativas."
+          },
+          {
+            "id": 2,
+            "title": "Implementar componente UserProfile",
+            "description": "Desenvolver o subcomponente UserProfile que exibe o avatar, nome e role do usuário logado.",
+            "dependencies": [],
+            "details": "Criar o componente UserProfile.tsx:\n- Implementar interface para tipagem dos dados do usuário (avatar, nome, role)\n- Utilizar componentes shadcn/ui para exibição do avatar\n- Criar dropdown para opções do perfil\n- Estilizar usando Tailwind seguindo a identidade visual\n- Implementar versão responsiva que colapsa em telas menores\n- Preparar integração com o sistema de autenticação (props ou context)",
+            "status": "done",
+            "testStrategy": "Testar a renderização do componente com diferentes dados de usuário, verificar comportamento responsivo e testar interações do dropdown."
+          },
+          {
+            "id": 3,
+            "title": "Implementar componente SearchBar",
+            "description": "Desenvolver o subcomponente SearchBar para busca de módulos com funcionalidade de autocompletar.",
+            "dependencies": [],
+            "details": "Criar o componente SearchBar.tsx:\n- Utilizar componentes shadcn/ui para o input de busca\n- Implementar ícone de lupa usando alguma biblioteca de ícones compatível\n- Adicionar estado para controlar o valor do input\n- Implementar handler para submissão da busca\n- Estilizar conforme a identidade visual com detalhes em Teal\n- Adicionar placeholder configurável\n- Preparar estrutura para implementação futura do autocompletar",
+            "status": "done",
+            "testStrategy": "Testar a captura de eventos de input, submissão de busca e verificar a estilização correta em diferentes tamanhos de tela."
+          },
+          {
+            "id": 4,
+            "title": "Implementar SessionStatus e integrar todos os componentes",
+            "description": "Desenvolver o subcomponente SessionStatus para exibir o status da sessão atual e integrar todos os componentes no Header principal.",
+            "dependencies": [],
+            "details": "Criar o componente SessionStatus.tsx e finalizar a integração:\n- Implementar indicador visual do status da sessão (ativo, inativo)\n- Adicionar tooltip com informações detalhadas da sessão\n- Estilizar conforme a identidade visual\n- Integrar todos os subcomponentes no Header.tsx principal\n- Implementar props para configuração dos componentes\n- Configurar Context API ou hooks personalizados para obtenção dos dados do usuário e sessão\n- Finalizar ajustes de responsividade para o header completo",
+            "status": "done",
+            "testStrategy": "Testar a integração de todos os componentes, verificar a exibição correta do status da sessão em diferentes estados, realizar testes de acessibilidade WCAG AA e testar a responsividade do header completo em múltiplos dispositivos."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Desenvolver Dashboard de Métricas",
+        "description": "Criar um dashboard simples com 3-4 KPIs essenciais, incluindo total de módulos, acessos diários e tempo online, além de um gráfico de uso por módulo utilizando Tremor.",
+        "details": "Implementar o dashboard de métricas usando shadcn/ui e Tremor:\n\n1. Criar componente Dashboard.tsx com cards de KPIs:\n```tsx\nconst Dashboard = () => {\n  return (\n    <div className=\"grid grid-cols-1 md:grid-cols-3 gap-6 mb-8\">\n      <Card className=\"p-6 rounded-lg\">\n        <CardTitle>Total de Módulos</CardTitle>\n        <CardContent>\n          <div className=\"text-3xl font-bold mt-2\">17</div>\n        </CardContent>\n      </Card>\n      \n      <Card className=\"p-6 rounded-lg\">\n        <CardTitle>Acessos Hoje</CardTitle>\n        <CardContent>\n          <div className=\"text-3xl font-bold mt-2\">243</div>\n        </CardContent>\n      </Card>\n      \n      <Card className=\"p-6 rounded-lg\">\n        <CardTitle>Tempo Online</CardTitle>\n        <CardContent>\n          <div className=\"text-3xl font-bold mt-2\">99.8%</div>\n        </CardContent>\n      </Card>\n    </div>\n  );\n};\n```\n\n2. Implementar gráfico de uso por módulo com Tremor:\n```tsx\nconst ModuleUsageChart = () => {\n  // Dados de exemplo - substituir por dados reais da API\n  const chartdata = [\n    { module: \"Comercial+\", usage: 120 },\n    { module: \"Financeiro\", usage: 90 },\n    // outros módulos...\n  ];\n\n  return (\n    <Card className=\"p-6 rounded-lg\">\n      <CardTitle>Uso por Módulo</CardTitle>\n      <CardContent>\n        <BarChart\n          data={chartdata}\n          index=\"module\"\n          categories={[\"usage\"]}\n          colors={[\"teal\"]}\n          className=\"mt-4 h-80\"\n        />\n      </CardContent>\n    </Card>\n  );\n};\n```\n\n3. Implementar componente de alertas para módulos com problemas\n4. Integrar com Supabase para obter dados reais de métricas",
+        "testStrategy": "1. Testes unitários para cada componente de métrica\n2. Testes de integração com a API de dados\n3. Testes de renderização dos gráficos Tremor\n4. Verificação de performance para carregamento de dados\n5. Testes de responsividade para diferentes tamanhos de tela\n6. Validação visual dos componentes conforme design system",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar componentes de KPI com dados estáticos",
+            "description": "Criar os componentes de cartões KPI para exibir métricas essenciais como total de módulos, acessos diários e tempo online usando shadcn/ui.",
+            "dependencies": [],
+            "details": "Criar o arquivo components/dashboard/KpiCards.tsx que exporta um componente funcional renderizando três cartões de KPI em um grid responsivo. Cada cartão deve usar os componentes Card, CardTitle e CardContent do shadcn/ui. Inicialmente, usar dados estáticos para demonstração. Implementar design responsivo que se adapte a diferentes tamanhos de tela usando classes do Tailwind CSS. Adicionar ícones apropriados para cada KPI usando a biblioteca de ícones do projeto.",
+            "status": "done",
+            "testStrategy": "Escrever testes unitários para verificar a renderização correta dos componentes KPI. Testar a responsividade em diferentes breakpoints. Verificar se os valores estáticos são exibidos corretamente."
+          },
+          {
+            "id": 2,
+            "title": "Desenvolver gráfico de uso por módulo com Tremor",
+            "description": "Implementar um gráfico de barras usando a biblioteca Tremor para visualizar o uso por módulo, com dados de exemplo inicialmente.",
+            "dependencies": [],
+            "details": "Criar o arquivo components/dashboard/ModuleUsageChart.tsx que exporta um componente funcional contendo um gráfico de barras Tremor. Configurar o gráfico para exibir o uso por módulo com dados de exemplo. Implementar personalização visual do gráfico para seguir o design system do projeto, incluindo cores, fontes e espaçamentos. Adicionar tooltips informativos que aparecem ao passar o mouse sobre as barras do gráfico. Garantir que o gráfico seja responsivo e se adapte a diferentes tamanhos de tela.",
+            "status": "done",
+            "testStrategy": "Testar a renderização correta do gráfico com dados de exemplo. Verificar se os tooltips funcionam corretamente. Testar a responsividade do gráfico em diferentes tamanhos de tela."
+          },
+          {
+            "id": 3,
+            "title": "Implementar componente de alertas para módulos com problemas",
+            "description": "Desenvolver um componente que exibe alertas para módulos que estão enfrentando problemas ou necessitam de atenção.",
+            "dependencies": [],
+            "details": "Criar o arquivo components/dashboard/ModuleAlerts.tsx que exporta um componente funcional para exibir alertas de módulos com problemas. Implementar diferentes níveis de alerta (crítico, aviso, informativo) com cores e ícones distintos. Cada alerta deve mostrar o nome do módulo, descrição do problema, timestamp e ação recomendada. Adicionar funcionalidade para descartar ou marcar alertas como resolvidos. Inicialmente, usar dados estáticos para demonstração. Implementar design responsivo usando Tailwind CSS.",
+            "status": "done",
+            "testStrategy": "Testar a renderização correta dos diferentes níveis de alerta. Verificar se as interações (descartar/resolver alertas) funcionam corretamente. Testar a responsividade do componente em diferentes tamanhos de tela."
+          },
+          {
+            "id": 4,
+            "title": "Integrar dashboard com Supabase para dados reais",
+            "description": "Conectar os componentes do dashboard com o Supabase para buscar e exibir dados reais de métricas, substituindo os dados estáticos.",
+            "dependencies": [
+              "2.1",
+              "2.2",
+              "2.3"
+            ],
+            "details": "Criar o arquivo lib/api/dashboard.ts com funções para buscar dados de métricas do Supabase: fetchKpiData(), fetchModuleUsageData(), e fetchModuleAlerts(). Implementar hooks React personalizados em hooks/useDashboardData.ts que utilizem as funções de API e gerenciem estados de loading e erro. Atualizar os componentes KpiCards, ModuleUsageChart e ModuleAlerts para usar os hooks de dados reais. Implementar estados de loading e tratamento de erros em cada componente. Adicionar cache e revalidação de dados para otimizar a performance. Criar um componente Dashboard.tsx que combine todos os componentes em um layout coeso.",
+            "status": "done",
+            "testStrategy": "Testar a integração com o Supabase usando mocks para simular respostas da API. Verificar se os estados de loading e erro são tratados corretamente. Testar a atualização dos componentes quando novos dados são recebidos. Realizar testes de performance para garantir que o dashboard carrega eficientemente."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implementar Funcionalidades de Busca e Filtro",
+        "description": "Desenvolver funcionalidades de busca e filtro para módulos, incluindo barra de busca, filtros por status e opções de ordenação com interface minimalista.",
+        "details": "Implementar sistema de busca e filtro:\n\n1. Criar componente SearchAndFilter.tsx:\n```tsx\nconst SearchAndFilter = ({ onSearch, onFilter, onSort }) => {\n  return (\n    <div className=\"flex flex-col md:flex-row gap-4 mb-8\">\n      <Input \n        placeholder=\"Buscar módulos...\" \n        className=\"w-full md:w-1/3\"\n        onChange={(e) => onSearch(e.target.value)}\n      />\n      \n      <Select onValueChange={onFilter}>\n        <SelectTrigger className=\"w-full md:w-auto\">\n          <SelectValue placeholder=\"Status\" />\n        </SelectTrigger>\n        <SelectContent>\n          <SelectItem value=\"all\">Todos</SelectItem>\n          <SelectItem value=\"available\">Disponível</SelectItem>\n          <SelectItem value=\"development\">Em desenvolvimento</SelectItem>\n          <SelectItem value=\"maintenance\">Manutenção</SelectItem>\n        </SelectContent>\n      </Select>\n      \n      <Select onValueChange={onSort}>\n        <SelectTrigger className=\"w-full md:w-auto\">\n          <SelectValue placeholder=\"Ordenar por\" />\n        </SelectTrigger>\n        <SelectContent>\n          <SelectItem value=\"name\">Nome</SelectItem>\n          <SelectItem value=\"recent\">Uso recente</SelectItem>\n          <SelectItem value=\"popular\">Popularidade</SelectItem>\n        </SelectContent>\n      </Select>\n    </div>\n  );\n};\n```\n\n2. Implementar lógica de filtragem e ordenação:\n```tsx\nconst ModulesList = () => {\n  const [modules, setModules] = useState([]);\n  const [filteredModules, setFilteredModules] = useState([]);\n  const [searchQuery, setSearchQuery] = useState('');\n  const [statusFilter, setStatusFilter] = useState('all');\n  const [sortBy, setSortBy] = useState('name');\n  \n  useEffect(() => {\n    // Fetch modules from API\n    fetchModules().then(setModules);\n  }, []);\n  \n  useEffect(() => {\n    let result = [...modules];\n    \n    // Apply search filter\n    if (searchQuery) {\n      result = result.filter(module => \n        module.name.toLowerCase().includes(searchQuery.toLowerCase())\n      );\n    }\n    \n    // Apply status filter\n    if (statusFilter !== 'all') {\n      result = result.filter(module => module.status === statusFilter);\n    }\n    \n    // Apply sorting\n    result.sort((a, b) => {\n      if (sortBy === 'name') return a.name.localeCompare(b.name);\n      if (sortBy === 'recent') return b.lastAccessed - a.lastAccessed;\n      if (sortBy === 'popular') return b.accessCount - a.accessCount;\n      return 0;\n    });\n    \n    setFilteredModules(result);\n  }, [modules, searchQuery, statusFilter, sortBy]);\n  \n  return (\n    <div>\n      <SearchAndFilter \n        onSearch={setSearchQuery}\n        onFilter={setStatusFilter}\n        onSort={setSortBy}\n      />\n      <ModulesGrid modules={filteredModules} />\n    </div>\n  );\n};\n```\n\n3. Integrar com a API para buscar dados dos módulos\n4. Implementar debounce na busca para melhorar performance",
+        "testStrategy": "1. Testes unitários para componentes de busca e filtro\n2. Testes de integração para verificar a lógica de filtragem e ordenação\n3. Testes de usabilidade para validar a experiência do usuário\n4. Testes de performance para busca com grandes conjuntos de dados\n5. Testes de acessibilidade para garantir que os filtros são acessíveis\n6. Testes de edge cases (busca sem resultados, filtros combinados)",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar componente SearchAndFilter.tsx",
+            "description": "Criar o componente de busca e filtro com interface responsiva, incluindo campo de busca, filtro por status e opções de ordenação.",
+            "dependencies": [],
+            "details": "Desenvolver o componente SearchAndFilter.tsx conforme o design especificado, utilizando os componentes Input e Select do shadcn/ui. Garantir que o componente seja responsivo, alterando de layout em telas menores (flex-col para flex-row). Implementar os callbacks onSearch, onFilter e onSort para comunicação com o componente pai. Adicionar acessibilidade com labels apropriados e suporte a navegação por teclado.",
+            "status": "pending",
+            "testStrategy": "Testar o componente isoladamente com React Testing Library, verificando se os callbacks são chamados corretamente quando o usuário interage com os inputs. Testar a responsividade em diferentes breakpoints."
+          },
+          {
+            "id": 2,
+            "title": "Implementar lógica de filtragem e ordenação",
+            "description": "Desenvolver a lógica para filtrar e ordenar a lista de módulos com base nos critérios de busca, status e ordenação selecionados pelo usuário.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Implementar o componente ModulesList que gerencia o estado dos módulos e aplica os filtros e ordenação. Utilizar useState para armazenar os estados de módulos, filtros e ordenação. Implementar useEffect para aplicar os filtros e ordenação sempre que houver mudanças nos critérios. Criar funções para filtrar por texto de busca e por status, além de implementar diferentes métodos de ordenação (por nome, uso recente e popularidade).",
+            "status": "pending",
+            "testStrategy": "Testar a lógica de filtragem e ordenação com diferentes combinações de critérios. Verificar se os resultados são filtrados e ordenados corretamente. Testar casos extremos como listas vazias ou filtros que não retornam resultados."
+          },
+          {
+            "id": 3,
+            "title": "Integrar com API para busca de módulos",
+            "description": "Implementar a integração com a API para buscar os dados dos módulos e atualizar a lista conforme necessário.",
+            "dependencies": [
+              "3.2"
+            ],
+            "details": "Criar um serviço de API para buscar os módulos do backend. Implementar a função fetchModules() que fará a requisição HTTP para obter os dados. Integrar esta função no componente ModulesList usando useEffect para carregar os dados quando o componente for montado. Adicionar estados de loading e error handling para tratar diferentes cenários de resposta da API. Considerar implementar cache de resultados para melhorar a performance em buscas repetidas.",
+            "status": "pending",
+            "testStrategy": "Testar a integração com a API usando mocks para simular diferentes respostas do servidor. Verificar se os estados de loading e error são gerenciados corretamente. Testar a recuperação após falhas de rede."
+          },
+          {
+            "id": 4,
+            "title": "Implementar debounce na busca e otimizações de performance",
+            "description": "Adicionar debounce na funcionalidade de busca para evitar múltiplas requisições e implementar otimizações de performance para grandes conjuntos de dados.",
+            "dependencies": [
+              "3.2",
+              "3.3"
+            ],
+            "details": "Implementar debounce na função de busca utilizando uma biblioteca como lodash ou uma implementação customizada com setTimeout/clearTimeout. Configurar um delay adequado (300-500ms) para evitar requisições desnecessárias enquanto o usuário digita. Otimizar a renderização de listas grandes usando técnicas como virtualização (react-window ou react-virtualized) ou paginação. Implementar memoização com useMemo para cálculos pesados de filtragem e React.memo para evitar renderizações desnecessárias de componentes filhos.",
+            "status": "pending",
+            "testStrategy": "Testar o comportamento do debounce verificando se as requisições são atrasadas conforme esperado. Realizar testes de performance com conjuntos grandes de dados para garantir que a interface permanece responsiva. Testar a experiência do usuário em dispositivos de baixo desempenho."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Criar Grid de Módulos",
+        "description": "Desenvolver um grid responsivo para exibir os módulos disponíveis, em desenvolvimento e planejados, com cards visuais seguindo o design system.",
+        "details": "Implementar o grid de módulos usando shadcn/ui e Tailwind CSS:\n\n1. Criar componente ModulesGrid.tsx:\n```tsx\nconst ModulesGrid = ({ modules }) => {\n  return (\n    <div className=\"grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6\">\n      {modules.map((module) => (\n        <ModuleCard key={module.id} module={module} />\n      ))}\n    </div>\n  );\n};\n```\n\n2. Implementar componente ModuleCard.tsx:\n```tsx\nconst ModuleCard = ({ module }) => {\n  const statusColors = {\n    available: \"bg-green-100 text-green-800\",\n    development: \"bg-blue-100 text-blue-800\",\n    planned: \"bg-gray-100 text-gray-800\"\n  };\n\n  return (\n    <Card className=\"overflow-hidden hover:shadow-md transition-shadow duration-300\">\n      <div className=\"p-6\">\n        <div className=\"flex justify-between items-start mb-4\">\n          <h3 className=\"font-semibold text-lg\">{module.name}</h3>\n          <Badge className={statusColors[module.status]}>\n            {module.status === \"available\" ? \"Disponível\" : \n             module.status === \"development\" ? \"Em desenvolvimento\" : \"Planejado\"}\n          </Badge>\n        </div>\n        \n        <p className=\"text-gray-600 mb-4 text-sm\">{module.description}</p>\n        \n        <div className=\"flex justify-between items-center\">\n          <div className=\"text-sm text-gray-500\">\n            {module.status === \"available\" ? \n              `Último acesso: ${formatDate(module.lastAccessed)}` : \n              module.status === \"development\" ? \n              `Lançamento previsto: ${formatDate(module.releaseDate)}` : \n              \"Em planejamento\"}\n          </div>\n          \n          {module.status === \"available\" && (\n            <Button variant=\"outline\" size=\"sm\">\n              Acessar\n            </Button>\n          )}\n        </div>\n      </div>\n    </Card>\n  );\n};\n```\n\n3. Implementar lógica para exibir os 17 módulos mencionados no PRD com seus respectivos status\n4. Adicionar tooltips informativos nos cards\n5. Implementar estados de hover e active para microinterações\n6. Garantir que o grid seja responsivo em diferentes tamanhos de tela",
+        "testStrategy": "1. Testes unitários para os componentes ModulesGrid e ModuleCard\n2. Testes de snapshot para garantir consistência visual\n3. Testes de responsividade em diferentes breakpoints\n4. Testes de acessibilidade para garantir conformidade com WCAG AA\n5. Testes de interação para verificar tooltips e estados de hover\n6. Validação visual com o design system",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar componente ModulesGrid.tsx",
+            "description": "Criar o componente ModulesGrid que será responsável por renderizar o grid responsivo de módulos, utilizando Tailwind CSS para definir o layout em diferentes breakpoints.",
+            "dependencies": [],
+            "details": "Implementar o componente ModulesGrid.tsx conforme o esqueleto fornecido, garantindo que o grid seja responsivo. Adicionar tipos TypeScript adequados para as props e módulos. Implementar a lógica para lidar com diferentes quantidades de módulos e garantir que o layout se ajuste corretamente em todos os breakpoints (mobile, tablet, desktop). Adicionar testes para verificar se o componente renderiza corretamente com diferentes props.",
+            "status": "pending",
+            "testStrategy": "Criar testes unitários com React Testing Library para verificar se o componente renderiza corretamente com diferentes quantidades de módulos. Testar a responsividade simulando diferentes tamanhos de tela."
+          },
+          {
+            "id": 2,
+            "title": "Implementar componente ModuleCard.tsx",
+            "description": "Desenvolver o componente ModuleCard que exibirá as informações de cada módulo, incluindo nome, descrição, status e ações relevantes.",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Implementar o componente ModuleCard.tsx conforme o esqueleto fornecido, utilizando os componentes Card e Badge do shadcn/ui. Adicionar lógica para exibir diferentes informações e ações baseadas no status do módulo (disponível, em desenvolvimento, planejado). Implementar a função formatDate para formatar datas de último acesso e lançamento previsto. Adicionar estados de hover e active para microinterações conforme mencionado nos requisitos.",
+            "status": "pending",
+            "testStrategy": "Criar testes unitários para verificar se o componente renderiza corretamente para cada status de módulo. Testar se as microinterações (hover, active) funcionam conforme esperado. Criar snapshots para garantir consistência visual."
+          },
+          {
+            "id": 3,
+            "title": "Implementar tooltips e microinterações",
+            "description": "Adicionar tooltips informativos aos cards de módulos e implementar microinterações para melhorar a experiência do usuário.",
+            "dependencies": [
+              "4.2"
+            ],
+            "details": "Utilizar o componente Tooltip do shadcn/ui para adicionar tooltips informativos aos cards, fornecendo informações adicionais sobre cada módulo quando o usuário passa o mouse sobre elementos específicos. Implementar microinterações como animações sutis de hover, focus e active states para os cards e botões. Garantir que as interações sejam acessíveis e funcionem tanto com mouse quanto com teclado. Adicionar transições suaves para melhorar a experiência visual.",
+            "status": "pending",
+            "testStrategy": "Testar a acessibilidade dos tooltips e microinterações usando ferramentas como Axe. Verificar se os tooltips aparecem corretamente em diferentes dispositivos. Testar a navegação por teclado para garantir que todas as interações sejam acessíveis."
+          },
+          {
+            "id": 4,
+            "title": "Implementar dados de módulos e integração",
+            "description": "Criar a estrutura de dados para os 17 módulos mencionados no PRD e integrar com os componentes de grid e card.",
+            "dependencies": [
+              "4.1",
+              "4.2",
+              "4.3"
+            ],
+            "details": "Criar um arquivo de dados (pode ser um mock inicial) contendo informações para os 17 módulos mencionados no PRD, incluindo nome, descrição, status, datas relevantes e outras informações necessárias. Implementar um hook personalizado (useModules) para gerenciar o estado e a lógica de carregamento dos módulos. Integrar os dados com os componentes ModulesGrid e ModuleCard. Garantir que o grid seja responsivo e se adapte corretamente a diferentes quantidades de módulos e tamanhos de tela.",
+            "status": "pending",
+            "testStrategy": "Testar a integração dos dados com os componentes. Verificar se o grid se comporta corretamente com diferentes quantidades de módulos. Testar a responsividade em diferentes breakpoints (mobile, tablet, desktop). Realizar testes de acessibilidade para garantir conformidade com WCAG AA."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implementar Seção de Atividade Recente",
+        "description": "Desenvolver uma seção de atividade recente com timeline de acessos, módulos favoritos ou mais usados e sugestões baseadas no perfil do usuário.",
+        "details": "Implementar a seção de atividade recente:\n\n1. Criar componente RecentActivity.tsx:\n```tsx\nconst RecentActivity = () => {\n  const [recentActivities, setRecentActivities] = useState([]);\n  const [favoriteModules, setFavoriteModules] = useState([]);\n  const [suggestions, setSuggestions] = useState([]);\n  \n  useEffect(() => {\n    // Fetch data from API\n    Promise.all([\n      fetchRecentActivities(),\n      fetchFavoriteModules(),\n      fetchSuggestions()\n    ]).then(([activities, favorites, userSuggestions]) => {\n      setRecentActivities(activities);\n      setFavoriteModules(favorites);\n      setSuggestions(userSuggestions);\n    });\n  }, []);\n  \n  return (\n    <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 mb-8\">\n      <Card className=\"p-6 rounded-lg\">\n        <CardTitle className=\"mb-4\">Atividade Recente</CardTitle>\n        <CardContent>\n          <Timeline>\n            {recentActivities.map((activity) => (\n              <TimelineItem key={activity.id}>\n                <TimelineIcon />\n                <div>\n                  <p className=\"font-medium\">{activity.moduleName}</p>\n                  <p className=\"text-sm text-gray-500\">{formatDate(activity.timestamp)}</p>\n                </div>\n              </TimelineItem>\n            ))}\n          </Timeline>\n        </CardContent>\n      </Card>\n      \n      <div className=\"space-y-6\">\n        <Card className=\"p-6 rounded-lg\">\n          <CardTitle className=\"mb-4\">Módulos Favoritos</CardTitle>\n          <CardContent>\n            <div className=\"space-y-4\">\n              {favoriteModules.map((module) => (\n                <div key={module.id} className=\"flex items-center gap-3\">\n                  <div className=\"w-10 h-10 rounded-full bg-[#0A2342] flex items-center justify-center text-white\">\n                    {module.name.charAt(0)}\n                  </div>\n                  <div>\n                    <p className=\"font-medium\">{module.name}</p>\n                    <p className=\"text-sm text-gray-500\">{module.accessCount} acessos</p>\n                  </div>\n                </div>\n              ))}\n            </div>\n          </CardContent>\n        </Card>\n        \n        <Card className=\"p-6 rounded-lg\">\n          <CardTitle className=\"mb-4\">Sugestões para Você</CardTitle>\n          <CardContent>\n            <div className=\"space-y-4\">\n              {suggestions.map((suggestion) => (\n                <div key={suggestion.id} className=\"flex items-center gap-3\">\n                  <div className=\"w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-800\">\n                    {suggestion.name.charAt(0)}\n                  </div>\n                  <div>\n                    <p className=\"font-medium\">{suggestion.name}</p>\n                    <p className=\"text-sm text-gray-500\">{suggestion.reason}</p>\n                  </div>\n                </div>\n              ))}\n            </div>\n          </CardContent>\n        </Card>\n      </div>\n    </div>\n  );\n};\n```\n\n2. Implementar componentes auxiliares:\n   - Timeline e TimelineItem para exibir atividades recentes\n   - Cards para módulos favoritos\n   - Cards para sugestões\n\n3. Integrar com Supabase para buscar dados reais de atividade, favoritos e sugestões\n4. Implementar lógica para gerar sugestões baseadas no perfil do usuário",
+        "testStrategy": "1. Testes unitários para o componente RecentActivity e seus subcomponentes\n2. Testes de integração com a API para verificar a obtenção de dados\n3. Testes de renderização condicional para diferentes estados de dados\n4. Testes de acessibilidade para garantir conformidade com WCAG AA\n5. Testes de responsividade para diferentes tamanhos de tela\n6. Validação visual com o design system",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Criar componentes Timeline e TimelineItem",
+            "description": "Desenvolver os componentes Timeline e TimelineItem para exibir a lista de atividades recentes do usuário em formato cronológico.",
+            "dependencies": [],
+            "details": "Implementar os componentes Timeline e TimelineItem:\n\n```tsx\n// components/Timeline.tsx\nexport const Timeline = ({ children }) => {\n  return (\n    <div className=\"space-y-4\">\n      {children}\n    </div>\n  );\n};\n\n// components/TimelineItem.tsx\nexport const TimelineItem = ({ children }) => {\n  return (\n    <div className=\"flex items-start gap-3\">\n      <TimelineIcon />\n      <div className=\"flex-1\">{children}</div>\n    </div>\n  );\n};\n\nexport const TimelineIcon = () => {\n  return (\n    <div className=\"mt-1 relative\">\n      <div className=\"w-3 h-3 rounded-full bg-[#0A2342]\"></div>\n      <div className=\"absolute top-3 bottom-0 left-1/2 w-0.5 -translate-x-1/2 bg-gray-200\"></div>\n    </div>\n  );\n};\n```\n\nEstilizar os componentes para criar uma visualização clara da sequência temporal, com ícones, linhas conectoras e formatação adequada para timestamps.",
+            "status": "pending",
+            "testStrategy": "1. Testar a renderização correta dos componentes Timeline e TimelineItem\n2. Verificar se os componentes aceitam children corretamente\n3. Testar a aparência visual em diferentes tamanhos de tela\n4. Verificar a acessibilidade dos componentes"
+          },
+          {
+            "id": 2,
+            "title": "Implementar serviços de API para dados de atividade",
+            "description": "Criar serviços para buscar dados de atividades recentes, módulos favoritos e sugestões personalizadas do Supabase.",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Implementar os serviços de API para buscar dados de atividade do usuário:\n\n```tsx\n// services/activityService.ts\nimport { supabase } from '../lib/supabaseClient';\n\nexport const fetchRecentActivities = async (userId: string) => {\n  const { data, error } = await supabase\n    .from('user_activities')\n    .select('id, module_id, module_name, timestamp, action_type')\n    .eq('user_id', userId)\n    .order('timestamp', { ascending: false })\n    .limit(5);\n    \n  if (error) throw error;\n  return data;\n};\n\nexport const fetchFavoriteModules = async (userId: string) => {\n  const { data, error } = await supabase\n    .from('user_module_stats')\n    .select('id, module_id, module_name, access_count')\n    .eq('user_id', userId)\n    .order('access_count', { ascending: false })\n    .limit(3);\n    \n  if (error) throw error;\n  return data;\n};\n\nexport const fetchSuggestions = async (userId: string) => {\n  // Lógica para buscar sugestões baseadas no perfil do usuário\n  // Pode incluir módulos populares que o usuário ainda não acessou\n  // ou módulos relacionados aos interesses do usuário\n  \n  const { data, error } = await supabase\n    .from('module_suggestions')\n    .select('id, module_id, module_name, reason')\n    .eq('user_id', userId)\n    .limit(3);\n    \n  if (error) throw error;\n  return data;\n};\n```",
+            "status": "pending",
+            "testStrategy": "1. Testar a conexão com o Supabase\n2. Verificar se as queries estão retornando os dados esperados\n3. Testar o tratamento de erros\n4. Simular diferentes cenários de resposta da API\n5. Verificar a performance das consultas"
+          },
+          {
+            "id": 3,
+            "title": "Implementar componentes de Card para módulos favoritos e sugestões",
+            "description": "Desenvolver os componentes de Card para exibir módulos favoritos e sugestões personalizadas para o usuário.",
+            "dependencies": [
+              "5.1"
+            ],
+            "details": "Implementar os componentes de Card para módulos favoritos e sugestões:\n\n```tsx\n// components/ModuleCard.tsx\nimport { Card, CardContent, CardTitle } from './ui/card';\n\nexport const ModuleCard = ({ title, children }) => {\n  return (\n    <Card className=\"p-6 rounded-lg shadow-sm\">\n      <CardTitle className=\"mb-4\">{title}</CardTitle>\n      <CardContent>\n        {children}\n      </CardContent>\n    </Card>\n  );\n};\n\n// components/ModuleItem.tsx\nexport const ModuleItem = ({ name, subtitle, iconColor = '#0A2342', textColor = 'white' }) => {\n  return (\n    <div className=\"flex items-center gap-3 py-2\">\n      <div \n        className={`w-10 h-10 rounded-full flex items-center justify-center text-${textColor}`}\n        style={{ backgroundColor: iconColor }}\n      >\n        {name.charAt(0)}\n      </div>\n      <div>\n        <p className=\"font-medium\">{name}</p>\n        <p className=\"text-sm text-gray-500\">{subtitle}</p>\n      </div>\n    </div>\n  );\n};\n```\n\nEstilizar os componentes para criar uma visualização atraente e consistente dos módulos favoritos e sugestões, com ícones, cores e formatação adequada.",
+            "status": "pending",
+            "testStrategy": "1. Testar a renderização correta dos componentes ModuleCard e ModuleItem\n2. Verificar se os componentes aceitam props corretamente\n3. Testar diferentes combinações de cores e conteúdos\n4. Verificar a acessibilidade dos componentes\n5. Testar a responsividade em diferentes tamanhos de tela"
+          },
+          {
+            "id": 4,
+            "title": "Integrar componente RecentActivity com serviços e UI",
+            "description": "Finalizar o componente RecentActivity.tsx integrando os serviços de API e componentes UI desenvolvidos, incluindo tratamento de estados de loading e erro.",
+            "dependencies": [
+              "5.1",
+              "5.2",
+              "5.3"
+            ],
+            "details": "Implementar o componente RecentActivity.tsx completo, integrando todos os componentes e serviços:\n\n```tsx\nimport { useState, useEffect } from 'react';\nimport { fetchRecentActivities, fetchFavoriteModules, fetchSuggestions } from '../services/activityService';\nimport { Timeline, TimelineItem, TimelineIcon } from './Timeline';\nimport { ModuleCard, ModuleItem } from './ModuleCard';\nimport { formatDate } from '../utils/dateUtils';\nimport { Skeleton } from './ui/skeleton';\n\nconst RecentActivity = () => {\n  const [recentActivities, setRecentActivities] = useState([]);\n  const [favoriteModules, setFavoriteModules] = useState([]);\n  const [suggestions, setSuggestions] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n  \n  useEffect(() => {\n    const userId = 'current-user-id'; // Obter do contexto de autenticação\n    setLoading(true);\n    \n    Promise.all([\n      fetchRecentActivities(userId),\n      fetchFavoriteModules(userId),\n      fetchSuggestions(userId)\n    ])\n      .then(([activities, favorites, userSuggestions]) => {\n        setRecentActivities(activities);\n        setFavoriteModules(favorites);\n        setSuggestions(userSuggestions);\n        setLoading(false);\n      })\n      .catch(err => {\n        console.error('Error fetching activity data:', err);\n        setError('Não foi possível carregar os dados de atividade');\n        setLoading(false);\n      });\n  }, []);\n  \n  if (loading) {\n    return (\n      <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 mb-8\">\n        <Skeleton className=\"h-80 rounded-lg\" />\n        <div className=\"space-y-6\">\n          <Skeleton className=\"h-36 rounded-lg\" />\n          <Skeleton className=\"h-36 rounded-lg\" />\n        </div>\n      </div>\n    );\n  }\n  \n  if (error) {\n    return (\n      <div className=\"p-6 bg-red-50 border border-red-200 rounded-lg text-red-700\">\n        {error}\n      </div>\n    );\n  }\n  \n  return (\n    <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 mb-8\">\n      <ModuleCard title=\"Atividade Recente\">\n        {recentActivities.length > 0 ? (\n          <Timeline>\n            {recentActivities.map((activity) => (\n              <TimelineItem key={activity.id}>\n                <p className=\"font-medium\">{activity.module_name}</p>\n                <p className=\"text-sm text-gray-500\">{formatDate(activity.timestamp)}</p>\n              </TimelineItem>\n            ))}\n          </Timeline>\n        ) : (\n          <p className=\"text-gray-500\">Nenhuma atividade recente encontrada.</p>\n        )}\n      </ModuleCard>\n      \n      <div className=\"space-y-6\">\n        <ModuleCard title=\"Módulos Favoritos\">\n          {favoriteModules.length > 0 ? (\n            <div className=\"space-y-2\">\n              {favoriteModules.map((module) => (\n                <ModuleItem \n                  key={module.id}\n                  name={module.module_name}\n                  subtitle={`${module.access_count} acessos`}\n                  iconColor=\"#0A2342\"\n                />\n              ))}\n            </div>\n          ) : (\n            <p className=\"text-gray-500\">Nenhum módulo favorito encontrado.</p>\n          )}\n        </ModuleCard>\n        \n        <ModuleCard title=\"Sugestões para Você\">\n          {suggestions.length > 0 ? (\n            <div className=\"space-y-2\">\n              {suggestions.map((suggestion) => (\n                <ModuleItem \n                  key={suggestion.id}\n                  name={suggestion.module_name}\n                  subtitle={suggestion.reason}\n                  iconColor=\"#14B8A6\"\n                  textColor=\"#134E4A\"\n                />\n              ))}\n            </div>\n          ) : (\n            <p className=\"text-gray-500\">Nenhuma sugestão disponível no momento.</p>\n          )}\n        </ModuleCard>\n      </div>\n    </div>\n  );\n};\n\nexport default RecentActivity;\n```\n\nImplementar também uma função de utilidade para formatação de datas:\n\n```tsx\n// utils/dateUtils.ts\nexport const formatDate = (dateString: string) => {\n  const date = new Date(dateString);\n  const now = new Date();\n  const diffMs = now.getTime() - date.getTime();\n  const diffMins = Math.round(diffMs / 60000);\n  const diffHours = Math.round(diffMins / 60);\n  const diffDays = Math.round(diffHours / 24);\n  \n  if (diffMins < 60) {\n    return `${diffMins} min atrás`;\n  } else if (diffHours < 24) {\n    return `${diffHours} h atrás`;\n  } else if (diffDays < 7) {\n    return `${diffDays} dias atrás`;\n  } else {\n    return date.toLocaleDateString('pt-BR');\n  }\n};\n```",
+            "status": "pending",
+            "testStrategy": "1. Testar o ciclo de vida do componente e a chamada correta aos serviços de API\n2. Verificar o tratamento adequado dos estados de loading e erro\n3. Testar a renderização condicional para diferentes estados de dados (vazio, parcial, completo)\n4. Verificar a formatação correta das datas\n5. Testar a responsividade em diferentes tamanhos de tela\n6. Verificar a acessibilidade do componente completo"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implementar Melhorias de UX",
+        "description": "Desenvolver melhorias de experiência do usuário, incluindo loading states, empty states, tooltips informativos, keyboard shortcuts e microinterações sutis.",
+        "details": "Implementar melhorias de UX:\n\n1. Criar componentes de loading state:\n```tsx\nconst LoadingState = () => {\n  return (\n    <div className=\"w-full flex items-center justify-center p-12\">\n      <div className=\"space-y-4 w-full max-w-md\">\n        <Skeleton className=\"h-12 w-full rounded-md\" />\n        <Skeleton className=\"h-32 w-full rounded-md\" />\n        <div className=\"grid grid-cols-3 gap-4\">\n          <Skeleton className=\"h-24 rounded-md\" />\n          <Skeleton className=\"h-24 rounded-md\" />\n          <Skeleton className=\"h-24 rounded-md\" />\n        </div>\n      </div>\n    </div>\n  );\n};\n```\n\n2. Criar componentes de empty state:\n```tsx\nconst EmptyState = ({ title, description, icon, action }) => {\n  return (\n    <div className=\"w-full flex flex-col items-center justify-center p-12 text-center\">\n      <div className=\"w-16 h-16 mb-4 text-gray-400\">{icon}</div>\n      <h3 className=\"text-lg font-medium mb-2\">{title}</h3>\n      <p className=\"text-gray-500 mb-6 max-w-md\">{description}</p>\n      {action && (\n        <Button onClick={action.onClick}>{action.label}</Button>\n      )}\n    </div>\n  );\n};\n```\n\n3. Implementar tooltips informativos:\n```tsx\nconst InfoTooltip = ({ content, children }) => {\n  return (\n    <Tooltip>\n      <TooltipTrigger asChild>\n        {children}\n      </TooltipTrigger>\n      <TooltipContent>\n        <p>{content}</p>\n      </TooltipContent>\n    </Tooltip>\n  );\n};\n```\n\n4. Implementar keyboard shortcuts:\n```tsx\nconst KeyboardShortcuts = () => {\n  useEffect(() => {\n    const handleKeyDown = (e) => {\n      // Ctrl/Cmd + K para abrir busca\n      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {\n        e.preventDefault();\n        // Abrir busca\n      }\n      \n      // Outras shortcuts...\n    };\n    \n    window.addEventListener('keydown', handleKeyDown);\n    return () => window.removeEventListener('keydown', handleKeyDown);\n  }, []);\n  \n  return null; // Componente sem renderização visual\n};\n```\n\n5. Implementar microinterações:\n```css\n/* Em seu arquivo CSS ou como classes Tailwind */\n.hover-lift {\n  transition: transform 0.2s ease-in-out;\n}\n\n.hover-lift:hover {\n  transform: translateY(-2px);\n}\n\n.pulse-on-click {\n  position: relative;\n}\n\n.pulse-on-click::after {\n  content: '';\n  position: absolute;\n  width: 100%;\n  height: 100%;\n  border-radius: inherit;\n  opacity: 0;\n  background: currentColor;\n  pointer-events: none;\n}\n\n.pulse-on-click:active::after {\n  animation: pulse 0.3s ease-out;\n}\n\n@keyframes pulse {\n  0% { opacity: 0.3; transform: scale(1); }\n  100% { opacity: 0; transform: scale(1.3); }\n}\n```\n\n6. Adicionar feedback visual para ações do usuário\n7. Implementar transições suaves entre estados da interface",
+        "testStrategy": "1. Testes unitários para cada componente de UX\n2. Testes de acessibilidade para garantir que as melhorias não comprometem a acessibilidade\n3. Testes de usabilidade para validar a eficácia das melhorias\n4. Testes de keyboard shortcuts para verificar o funcionamento correto\n5. Testes de animações e transições para garantir performance\n6. Testes de compatibilidade em diferentes navegadores",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar Loading e Empty States",
+            "description": "Desenvolver componentes reutilizáveis para estados de carregamento e estados vazios que possam ser utilizados em toda a aplicação para melhorar o feedback visual ao usuário.",
+            "dependencies": [],
+            "details": "1. Criar o componente LoadingState conforme especificado, utilizando o componente Skeleton do shadcn/ui para indicar conteúdo em carregamento.\n2. Implementar o componente EmptyState que aceita props para título, descrição, ícone e ação opcional.\n3. Criar variações de LoadingState para diferentes contextos (cards, listas, tabelas).\n4. Adicionar animações sutis aos estados de carregamento para indicar progresso.\n5. Integrar os componentes nos locais apropriados da aplicação onde dados são carregados ou podem estar vazios.",
+            "status": "pending",
+            "testStrategy": "1. Testes unitários para verificar se os componentes renderizam corretamente com diferentes props.\n2. Testes de snapshot para garantir consistência visual.\n3. Testes de acessibilidade para verificar se os estados são perceptíveis por tecnologias assistivas.\n4. Testes de integração para verificar o comportamento dos componentes em cenários reais de carregamento e dados vazios."
+          },
+          {
+            "id": 2,
+            "title": "Implementar Tooltips e Feedback Visual",
+            "description": "Desenvolver sistema de tooltips informativos e feedback visual para ações do usuário, melhorando a clareza e o retorno de interações na interface.",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "1. Implementar o componente InfoTooltip conforme especificado, utilizando o componente Tooltip do shadcn/ui.\n2. Criar sistema de feedback visual para ações do usuário (sucesso, erro, alerta).\n3. Adicionar tooltips em elementos que necessitam de explicação adicional (ícones, botões com funcionalidades não óbvias).\n4. Implementar indicadores visuais para ações em progresso (spinners, barras de progresso).\n5. Garantir que todos os feedbacks visuais sejam consistentes com a identidade visual da aplicação.",
+            "status": "pending",
+            "testStrategy": "1. Testes unitários para verificar o comportamento dos tooltips e feedbacks visuais.\n2. Testes de interação para garantir que os tooltips aparecem e desaparecem corretamente.\n3. Testes de acessibilidade para verificar se o feedback é perceptível por tecnologias assistivas.\n4. Testes de usabilidade para validar a eficácia do feedback visual."
+          },
+          {
+            "id": 3,
+            "title": "Implementar Keyboard Shortcuts",
+            "description": "Desenvolver sistema de atalhos de teclado para melhorar a eficiência de navegação e operações comuns na aplicação, com foco em acessibilidade e produtividade.",
+            "dependencies": [
+              "6.1",
+              "6.2"
+            ],
+            "details": "1. Implementar o componente KeyboardShortcuts conforme especificado para gerenciar os eventos de teclado.\n2. Definir e implementar atalhos para ações comuns: busca (Ctrl/Cmd + K), navegação entre seções, ações de formulário.\n3. Criar uma modal de ajuda acessível via '?' que exibe todos os atalhos disponíveis.\n4. Implementar sistema para permitir que usuários personalizem atalhos nas configurações.\n5. Adicionar indicadores visuais sutis para atalhos disponíveis em elementos interativos.",
+            "status": "pending",
+            "testStrategy": "1. Testes unitários para verificar se os atalhos de teclado funcionam corretamente.\n2. Testes de integração para validar o comportamento dos atalhos em diferentes contextos da aplicação.\n3. Testes de acessibilidade para garantir que os atalhos não conflitam com tecnologias assistivas.\n4. Testes de usabilidade para validar a intuitividade e eficácia dos atalhos implementados."
+          },
+          {
+            "id": 4,
+            "title": "Implementar Microinterações e Transições",
+            "description": "Desenvolver microinterações sutis e transições suaves entre estados da interface para criar uma experiência mais fluida e agradável, mantendo o foco na usabilidade.",
+            "dependencies": [
+              "6.1",
+              "6.2",
+              "6.3"
+            ],
+            "details": "1. Implementar as classes CSS para microinterações conforme especificado (hover-lift, pulse-on-click).\n2. Criar transições suaves entre estados da interface (carregamento, dados carregados, erros).\n3. Adicionar animações sutis para feedback de ações (cliques, submissões de formulário).\n4. Implementar efeitos de transição para mudanças de rota/página.\n5. Garantir que todas as animações respeitem as preferências do usuário quanto a movimento reduzido (prefers-reduced-motion).\n6. Aplicar as microinterações de forma consistente em toda a aplicação.",
+            "status": "pending",
+            "testStrategy": "1. Testes visuais para verificar a consistência e qualidade das animações e transições.\n2. Testes de acessibilidade para garantir que as animações respeitam prefers-reduced-motion.\n3. Testes de performance para verificar o impacto das animações no desempenho da aplicação.\n4. Testes de usabilidade para validar se as microinterações melhoram a experiência do usuário sem causar distrações."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implementar Integração com Supabase",
+        "description": "Desenvolver a integração com Supabase para obtenção e persistência de dados, incluindo informações de módulos, métricas, atividades recentes e preferências do usuário.",
+        "details": "Implementar integração com Supabase:\n\n1. Configurar cliente Supabase:\n```tsx\nimport { createClient } from '@supabase/supabase-js';\n\nconst supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;\nconst supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;\n\nexport const supabase = createClient(supabaseUrl, supabaseAnonKey);\n```\n\n2. Criar serviços para buscar dados:\n```tsx\n// services/moduleService.ts\nexport const fetchModules = async () => {\n  const { data, error } = await supabase\n    .from('modules')\n    .select('*');\n    \n  if (error) throw error;\n  return data;\n};\n\nexport const fetchModuleById = async (id) => {\n  const { data, error } = await supabase\n    .from('modules')\n    .select('*')\n    .eq('id', id)\n    .single();\n    \n  if (error) throw error;\n  return data;\n};\n\n// services/activityService.ts\nexport const fetchRecentActivities = async () => {\n  const { data, error } = await supabase\n    .from('activities')\n    .select('*, module:modules(name)')\n    .order('timestamp', { ascending: false })\n    .limit(5);\n    \n  if (error) throw error;\n  return data;\n};\n\n// services/metricsService.ts\nexport const fetchMetrics = async () => {\n  const { data, error } = await supabase\n    .from('metrics')\n    .select('*')\n    .single();\n    \n  if (error) throw error;\n  return data;\n};\n\nexport const fetchModuleUsage = async () => {\n  const { data, error } = await supabase\n    .from('module_usage')\n    .select('module_id, module:modules(name), count');\n    \n  if (error) throw error;\n  return data;\n};\n```\n\n3. Implementar hooks personalizados para consumir os serviços:\n```tsx\n// hooks/useModules.ts\nexport const useModules = () => {\n  const [modules, setModules] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n  \n  useEffect(() => {\n    const loadModules = async () => {\n      try {\n        setLoading(true);\n        const data = await fetchModules();\n        setModules(data);\n      } catch (err) {\n        setError(err);\n      } finally {\n        setLoading(false);\n      }\n    };\n    \n    loadModules();\n  }, []);\n  \n  return { modules, loading, error };\n};\n\n// Hooks similares para outras entidades...\n```\n\n4. Implementar funções para persistir dados:\n```tsx\nexport const logModuleAccess = async (moduleId) => {\n  const { data, error } = await supabase\n    .from('activities')\n    .insert([\n      { \n        module_id: moduleId,\n        user_id: supabase.auth.user().id,\n        action: 'access',\n        timestamp: new Date()\n      }\n    ]);\n    \n  if (error) throw error;\n  return data;\n};\n```\n\n5. Configurar estrutura de dados no Supabase para armazenar informações sobre módulos, métricas, atividades e preferências do usuário",
+        "testStrategy": "1. Testes unitários para cada serviço de integração\n2. Testes de integração com o Supabase\n3. Testes de mock para simular respostas da API\n4. Testes de error handling para cenários de falha\n5. Testes de performance para operações de leitura e escrita\n6. Testes de segurança para garantir que apenas dados autorizados são acessados",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurar Cliente Supabase e Variáveis de Ambiente",
+            "description": "Configurar o cliente Supabase com as variáveis de ambiente necessárias e criar a estrutura base para os serviços de integração.",
+            "dependencies": [],
+            "details": "1. Criar arquivo .env.local com as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY\n2. Implementar o cliente Supabase em lib/supabase.ts\n3. Configurar tipos TypeScript para as tabelas do Supabase em types/database.types.ts\n4. Criar estrutura de pastas para serviços (services/)\n5. Implementar função de verificação de conexão para garantir que a integração está funcionando\n<info added on 2025-10-01T13:14:38.551Z>\n✅ **Configuração do Cliente Supabase Concluída**\n\n**Status da Integração:**\n- ✅ Cliente Supabase configurado e funcionando\n- ✅ Conexão estabelecida com sucesso\n- ✅ Schema do banco de dados carregado e tipado\n- ✅ Dados reais disponíveis no sistema\n\n**Dados Identificados:**\n- **Projetos:** 1 projeto ativo (\"Sistema de Gestão\")\n- **Módulos Frontend:** 3 módulos ativos (Acordos, Degustação, RBAC)\n- **Usuários:** 18 usuários cadastrados\n- **Sessões Ativas:** 6 sessões ativas\n- **Acordos:** 70 acordos no sistema\n- **Ações:** 33 ações registradas\n- **Logs de Acesso:** 21 registros de atividade recente\n\n**Próximos Passos:**\n- Implementar serviços de busca de dados\n- Desenvolver hooks customizados\n- Configurar funções de persistência\n</info added on 2025-10-01T13:14:38.551Z>",
+            "status": "done",
+            "testStrategy": "Criar testes para verificar se o cliente Supabase é inicializado corretamente e se as variáveis de ambiente estão sendo carregadas adequadamente. Usar mocks para simular respostas da API durante os testes."
+          },
+          {
+            "id": 2,
+            "title": "Implementar Serviços de Busca de Dados",
+            "description": "Desenvolver os serviços para buscar dados do Supabase, incluindo módulos, atividades recentes e métricas.",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "1. Criar services/moduleService.ts com funções fetchModules e fetchModuleById\n2. Criar services/activityService.ts com função fetchRecentActivities\n3. Criar services/metricsService.ts com funções fetchMetrics e fetchModuleUsage\n4. Implementar tratamento de erros adequado para cada serviço\n5. Adicionar tipagem TypeScript para todos os retornos de funções\n6. Implementar paginação para consultas que podem retornar muitos registros\n<info added on 2025-10-01T13:17:25.666Z>\n✅ **Serviços de Busca de Dados Implementados**\n\n**Arquivos Criados:**\n- `src/services/moduleService.ts` - Serviços para módulos e projetos\n- `src/services/activityService.ts` - Serviços para atividades e sessões\n- `src/services/metricsService.ts` - Serviços para métricas e KPIs\n- `src/services/index.ts` - Arquivo de índice para exportações\n\n**Funcionalidades Implementadas:**\n\n**ModuleService:**\n- ✅ fetchModules() - Busca todos os módulos\n- ✅ fetchModuleById() - Busca módulo específico\n- ✅ fetchModulesByProject() - Busca módulos por projeto\n- ✅ fetchModulesByStatus() - Busca módulos por status\n- ✅ fetchModuleStats() - Estatísticas dos módulos\n- ✅ fetchProjects() - Busca projetos\n- ✅ fetchProjectById() - Busca projeto específico\n\n**ActivityService:**\n- ✅ fetchRecentActivities() - Atividades recentes\n- ✅ fetchActiveSessions() - Sessões ativas\n- ✅ fetchResourceAccessHistory() - Histórico de acessos\n- ✅ fetchActivityStats() - Estatísticas de atividade\n- ✅ logResourceAccess() - Registrar acesso\n\n**MetricsService:**\n- ✅ fetchSystemMetrics() - Métricas gerais do sistema\n- ✅ fetchModuleUsageStats() - Estatísticas de uso dos módulos\n- ✅ fetchUserActivityStats() - Estatísticas de usuários\n- ✅ fetchDashboardKPIs() - KPIs para dashboard\n- ✅ fetchPerformanceMetrics() - Métricas de performance\n\n**Características:**\n- ✅ Tipagem TypeScript completa\n- ✅ Tratamento de erros adequado\n- ✅ Queries otimizadas com joins\n- ✅ Paginação e limites configuráveis\n- ✅ Cálculos de estatísticas e métricas\n- ✅ Sem erros de linting\n\n**Próximos Passos:**\n- Desenvolver hooks personalizados\n- Implementar funções de persistência\n</info added on 2025-10-01T13:17:25.666Z>",
+            "status": "done",
+            "testStrategy": "Criar testes unitários para cada serviço, verificando se as queries estão sendo construídas corretamente. Implementar testes de integração que verificam a comunicação com o Supabase. Testar cenários de erro e validar o tratamento adequado."
+          },
+          {
+            "id": 3,
+            "title": "Desenvolver Hooks Personalizados para Consumo de Dados",
+            "description": "Criar hooks React personalizados para consumir os serviços de dados do Supabase de forma eficiente e reutilizável.",
+            "dependencies": [
+              "7.2"
+            ],
+            "details": "1. Criar hooks/useModules.ts para gerenciar o estado de carregamento, erro e dados dos módulos\n2. Criar hooks/useActivities.ts para atividades recentes\n3. Criar hooks/useMetrics.ts para métricas e estatísticas\n4. Implementar cache e revalidação de dados usando SWR ou React Query\n5. Adicionar opções de refetch e invalidação de cache\n6. Implementar estratégias de otimização como debounce para requisições frequentes\n<info added on 2025-10-01T13:19:11.184Z>\n✅ **Hooks Personalizados Implementados**\n\n**Arquivos Criados:**\n- `src/hooks/useModules.ts` - Hooks para módulos e projetos\n- `src/hooks/useActivities.ts` - Hooks para atividades e sessões\n- `src/hooks/useMetrics.ts` - Hooks para métricas e KPIs\n- `src/hooks/useSupabaseData.ts` - Arquivo de índice para exportações\n\n**Hooks Implementados:**\n\n**useModules:**\n- ✅ useModules() - Hook principal para módulos com filtros\n- ✅ useModule() - Hook para módulo específico por ID\n- ✅ useModuleStats() - Hook para estatísticas dos módulos\n- ✅ Suporte a filtros por projeto e status\n- ✅ Opções de auto-fetch configuráveis\n\n**useActivities:**\n- ✅ useActivities() - Hook para atividades recentes\n- ✅ useActiveSessions() - Hook para sessões ativas\n- ✅ useResourceAccessHistory() - Hook para histórico de acessos\n- ✅ useActivityStats() - Hook para estatísticas de atividade\n- ✅ useResourceAccessLogger() - Hook para registrar acessos\n- ✅ Suporte a filtros por usuário e tipo de recurso\n\n**useMetrics:**\n- ✅ useSystemMetrics() - Hook para métricas gerais\n- ✅ useModuleUsageStats() - Hook para estatísticas de uso\n- ✅ useUserActivityStats() - Hook para estatísticas de usuários\n- ✅ useDashboardKPIs() - Hook para KPIs do dashboard\n- ✅ usePerformanceMetrics() - Hook para métricas de performance\n- ✅ useDashboardData() - Hook combinado para dashboard completo\n\n**Características:**\n- ✅ Estados de loading, error e data gerenciados\n- ✅ Funções de refetch para atualização manual\n- ✅ Callbacks otimizados com useCallback\n- ✅ Dependências corretas nos useEffect\n- ✅ Tipagem TypeScript completa\n- ✅ Tratamento de erros adequado\n- ✅ Sem erros de linting\n\n**Próximos Passos:**\n- Implementar funções de persistência\n- Configurar estrutura de dados\n</info added on 2025-10-01T13:19:11.184Z>",
+            "status": "done",
+            "testStrategy": "Testar os hooks com React Testing Library, verificando se os estados de loading, error e data são atualizados corretamente. Criar testes que simulam diferentes cenários de resposta da API, incluindo respostas de sucesso e falha."
+          },
+          {
+            "id": 4,
+            "title": "Implementar Funções de Persistência e Configurar Estrutura de Dados",
+            "description": "Desenvolver funções para persistir dados no Supabase e configurar a estrutura de tabelas necessária para o projeto.",
+            "dependencies": [
+              "7.1",
+              "7.2"
+            ],
+            "details": "1. Criar funções para persistência de dados como logModuleAccess, updateUserPreferences, saveModuleProgress\n2. Implementar funções de atualização de métricas e estatísticas\n3. Criar script SQL para definição das tabelas no Supabase (modules, activities, metrics, user_preferences)\n4. Configurar políticas de segurança RLS (Row Level Security) no Supabase\n5. Implementar funções para sincronização de dados offline-online\n6. Criar documentação detalhada da estrutura de dados e relações entre tabelas",
+            "status": "done",
+            "testStrategy": "Criar testes para as operações de escrita, verificando se os dados estão sendo persistidos corretamente. Implementar testes de integração que validam as políticas de segurança. Testar cenários de concorrência e conflitos de dados."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implementar Responsividade e Acessibilidade",
+        "description": "Garantir que a interface seja totalmente responsiva e atenda aos critérios de acessibilidade WCAG AA, incluindo suporte a diferentes dispositivos e tecnologias assistivas.",
+        "details": "Implementar responsividade e acessibilidade:\n\n1. Garantir responsividade com Tailwind CSS:\n```tsx\n// Exemplo de layout responsivo\n<div className=\"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6\">\n  {/* Conteúdo */}\n</div>\n\n// Menu responsivo\n<div className=\"hidden md:flex items-center gap-4\"> {/* Desktop menu */}\n  <NavItem>Dashboard</NavItem>\n  <NavItem>Módulos</NavItem>\n  <NavItem>Configurações</NavItem>\n</div>\n\n<button className=\"md:hidden\"> {/* Mobile menu button */}\n  <MenuIcon />\n</button>\n```\n\n2. Implementar acessibilidade WCAG AA:\n   - Adicionar atributos ARIA apropriados\n   - Garantir contraste adequado\n   - Implementar navegação por teclado\n   - Adicionar textos alternativos para imagens\n\n```tsx\n// Exemplo de componente acessível\nconst AccessibleButton = ({ onClick, children, ariaLabel }) => {\n  return (\n    <button\n      onClick={onClick}\n      aria-label={ariaLabel}\n      className=\"px-4 py-2 bg-[#0A2342] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500\"\n    >\n      {children}\n    </button>\n  );\n};\n\n// Exemplo de formulário acessível\nconst AccessibleForm = () => {\n  return (\n    <form>\n      <div className=\"mb-4\">\n        <label htmlFor=\"name\" className=\"block text-sm font-medium mb-1\">\n          Nome\n        </label>\n        <input\n          id=\"name\"\n          type=\"text\"\n          aria-required=\"true\"\n          className=\"w-full p-2 border rounded-md\"\n        />\n      </div>\n      \n      {/* Outros campos */}\n      \n      <button\n        type=\"submit\"\n        aria-label=\"Enviar formulário\"\n        className=\"px-4 py-2 bg-[#0A2342] text-white rounded-md\"\n      >\n        Enviar\n      </button>\n    </form>\n  );\n};\n```\n\n3. Implementar testes de acessibilidade automatizados:\n```javascript\n// Em seu arquivo de testes\nimport { axe } from 'jest-axe';\n\ntest('Component should not have accessibility violations', async () => {\n  const { container } = render(<YourComponent />);\n  const results = await axe(container);\n  expect(results).toHaveNoViolations();\n});\n```\n\n4. Adicionar suporte a modo escuro (dark mode):\n```tsx\n// Em seu arquivo de configuração do Tailwind\nmodule.exports = {\n  darkMode: 'class',\n  // outras configurações\n};\n\n// Em seu componente\n<div className=\"bg-white dark:bg-gray-900 text-gray-900 dark:text-white\">\n  {/* Conteúdo */}\n</div>\n```\n\n5. Implementar media queries para diferentes tamanhos de tela\n6. Testar em diferentes dispositivos e navegadores\n7. Garantir que todos os componentes interativos são acessíveis via teclado",
+        "testStrategy": "1. Testes de acessibilidade automatizados com jest-axe\n2. Testes manuais com leitores de tela (NVDA, VoiceOver)\n3. Testes de responsividade em diferentes dispositivos e tamanhos de tela\n4. Validação de contraste de cores para conformidade com WCAG AA\n5. Testes de navegação por teclado\n6. Validação com ferramentas como Lighthouse e WAVE\n7. Testes de compatibilidade em diferentes navegadores",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implementar Layout Responsivo com Tailwind CSS",
+            "description": "Desenvolver a estrutura responsiva da aplicação utilizando Tailwind CSS, garantindo que todos os componentes se adaptem corretamente a diferentes tamanhos de tela, desde dispositivos móveis até desktops.",
+            "dependencies": [],
+            "details": "1. Revisar todos os componentes existentes e aplicar classes responsivas do Tailwind:\n- Utilizar grid-cols-* e flex para layouts adaptáveis\n- Implementar classes condicionais baseadas em breakpoints (sm:, md:, lg:, xl:)\n- Criar um menu responsivo com versões para mobile e desktop\n\n2. Implementar um sistema de containers responsivos:\n```tsx\n<div className=\"container mx-auto px-4 sm:px-6 lg:px-8\">\n  {/* Conteúdo da página */}\n</div>\n```\n\n3. Garantir que formulários e elementos interativos sejam utilizáveis em touch devices:\n```tsx\n<button className=\"p-4 sm:p-2 text-lg sm:text-base\">\n  <span className=\"hidden sm:inline\">Adicionar Item</span>\n  <span className=\"inline sm:hidden\">+</span>\n</button>\n```\n\n4. Implementar media queries específicas para casos complexos que o Tailwind não resolve nativamente",
+            "status": "pending",
+            "testStrategy": "1. Testar a interface em múltiplos dispositivos reais (smartphones, tablets, desktops)\n2. Utilizar as ferramentas de desenvolvimento do navegador para simular diferentes tamanhos de tela\n3. Verificar pontos de quebra específicos onde o layout pode falhar\n4. Testar orientações portrait e landscape em dispositivos móveis"
+          },
+          {
+            "id": 2,
+            "title": "Implementar Acessibilidade WCAG AA",
+            "description": "Aplicar as diretrizes de acessibilidade WCAG AA em toda a aplicação, garantindo que pessoas com deficiências possam utilizar o sistema com tecnologias assistivas.",
+            "dependencies": [
+              "8.1"
+            ],
+            "details": "1. Adicionar atributos ARIA apropriados a todos os componentes interativos:\n```tsx\n<button\n  aria-label=\"Fechar modal\"\n  aria-expanded={isOpen}\n  onClick={closeModal}\n>\n  <CloseIcon />\n</button>\n```\n\n2. Implementar navegação por teclado e gerenciamento de foco:\n- Adicionar outline visível para elementos focados\n- Implementar trap focus em modais\n- Garantir ordem de tabulação lógica\n\n3. Garantir contraste adequado de cores conforme WCAG AA:\n```tsx\n// Cores com contraste adequado\n<div className=\"bg-gray-900 text-white\"> // Alto contraste\n  Texto importante\n</div>\n```\n\n4. Adicionar textos alternativos para todas as imagens e ícones:\n```tsx\n<img src=\"/logo.png\" alt=\"Logo da Empresa\" />\n<Icon aria-hidden=\"true\" /> <span className=\"sr-only\">Configurações</span>\n```",
+            "status": "pending",
+            "testStrategy": "1. Executar testes automatizados com jest-axe para identificar problemas de acessibilidade\n2. Testar a navegação completa usando apenas teclado\n3. Verificar a aplicação com leitores de tela (NVDA, VoiceOver)\n4. Utilizar ferramentas como Lighthouse e WAVE para validar conformidade WCAG AA\n5. Verificar contraste de cores com ferramentas específicas"
+          },
+          {
+            "id": 3,
+            "title": "Implementar Suporte a Dark Mode",
+            "description": "Adicionar suporte a modo escuro (dark mode) em toda a aplicação, permitindo que os usuários alternem entre temas claro e escuro conforme sua preferência.",
+            "dependencies": [
+              "8.1",
+              "8.2"
+            ],
+            "details": "1. Configurar o Tailwind CSS para suportar dark mode:\n```js\n// tailwind.config.js\nmodule.exports = {\n  darkMode: 'class',\n  // outras configurações\n};\n```\n\n2. Implementar componente de toggle para alternar entre os temas:\n```tsx\nconst ThemeToggle = () => {\n  const [theme, setTheme] = useState('light');\n  \n  const toggleTheme = () => {\n    const newTheme = theme === 'light' ? 'dark' : 'light';\n    setTheme(newTheme);\n    document.documentElement.classList.toggle('dark');\n    localStorage.setItem('theme', newTheme);\n  };\n  \n  return (\n    <button\n      onClick={toggleTheme}\n      aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}\n      className=\"p-2 rounded-full bg-gray-200 dark:bg-gray-800\"\n    >\n      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}\n    </button>\n  );\n};\n```\n\n3. Aplicar classes condicionais dark: em todos os componentes:\n```tsx\n<div className=\"bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-4 rounded-lg shadow\">\n  <h2 className=\"text-xl font-bold text-gray-800 dark:text-gray-100\">Título</h2>\n  <p className=\"text-gray-600 dark:text-gray-300\">Conteúdo</p>\n</div>\n```\n\n4. Implementar detecção de preferência do sistema:\n```tsx\n// Em _app.tsx ou layout.tsx\nuseEffect(() => {\n  const savedTheme = localStorage.getItem('theme');\n  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;\n  \n  if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {\n    document.documentElement.classList.add('dark');\n    setTheme('dark');\n  }\n}, []);\n```",
+            "status": "pending",
+            "testStrategy": "1. Testar a alternância entre temas claro e escuro\n2. Verificar se a preferência do usuário é persistida corretamente\n3. Testar a detecção automática de preferência do sistema\n4. Verificar contraste e legibilidade em ambos os temas\n5. Testar a aparência de todos os componentes em ambos os temas"
+          },
+          {
+            "id": 4,
+            "title": "Implementar Testes e Validação de Acessibilidade",
+            "description": "Desenvolver e executar testes automatizados e manuais para garantir que a aplicação atenda aos requisitos de acessibilidade e responsividade em diferentes dispositivos e tecnologias assistivas.",
+            "dependencies": [
+              "8.1",
+              "8.2",
+              "8.3"
+            ],
+            "details": "1. Configurar e implementar testes automatizados com jest-axe:\n```tsx\n// Em seu arquivo de testes\nimport { axe } from 'jest-axe';\n\ndescribe('Accessibility tests', () => {\n  it('Header should not have accessibility violations', async () => {\n    const { container } = render(<Header />);\n    const results = await axe(container);\n    expect(results).toHaveNoViolations();\n  });\n  \n  it('Dashboard should not have accessibility violations', async () => {\n    const { container } = render(<Dashboard />);\n    const results = await axe(container);\n    expect(results).toHaveNoViolations();\n  });\n});\n```\n\n2. Criar checklist de validação manual para acessibilidade:\n- Navegação completa usando apenas teclado\n- Teste com leitores de tela (NVDA, VoiceOver)\n- Verificação de contraste em todos os componentes\n- Teste de redimensionamento de texto (200%)\n- Verificação de alternativas textuais\n\n3. Implementar testes de responsividade:\n```tsx\n// Teste de viewport em diferentes tamanhos\ndescribe('Responsive tests', () => {\n  const viewports = [\n    { width: 375, height: 667 }, // iPhone SE\n    { width: 768, height: 1024 }, // iPad\n    { width: 1280, height: 800 }, // Desktop\n    { width: 1920, height: 1080 } // Large Desktop\n  ];\n  \n  viewports.forEach(viewport => {\n    it(`should render correctly at ${viewport.width}x${viewport.height}`, () => {\n      // Configurar viewport\n      // Renderizar componente\n      // Verificar se elementos estão visíveis/ocultos conforme esperado\n    });\n  });\n});\n```\n\n4. Documentar e corrigir problemas encontrados durante os testes",
+            "status": "pending",
+            "testStrategy": "1. Executar testes automatizados em pipeline CI/CD\n2. Realizar testes manuais com diferentes tecnologias assistivas\n3. Testar em múltiplos navegadores (Chrome, Firefox, Safari, Edge)\n4. Validar com ferramentas como Lighthouse, WAVE e axe DevTools\n5. Documentar resultados e criar plano de correção para problemas identificados"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Create Custom Hooks for User Role Management with RLS Compliance",
+        "description": "Develop custom React hooks to manage user roles, including viewing, adding, removing, and activating/deactivating roles, ensuring all operations respect existing Row Level Security (RLS) policies.",
+        "details": "Implement a set of custom hooks (e.g., useRoles, useAddRole, useRemoveRole, useToggleRoleStatus) that encapsulate logic for managing user roles. Each hook should:\n\n- Interact with the Supabase backend using its client library to fetch and mutate role data, leveraging Supabase's built-in RLS for security enforcement.\n- Use the current user context (e.g., via a useCurrentUser hook) to determine permissions and filter available actions, following patterns such as useHasRoles and useHasPermissions for authorization checks[1].\n- Ensure all role management operations (view, add, remove, activate/deactivate) are performed via Supabase queries that respect RLS policies, so unauthorized users cannot access or modify roles.\n- Provide clear error handling and loading states for each hook, using best practices for asynchronous operations in React (e.g., useState, useEffect, useCallback)[2][3].\n- Expose hook APIs that return relevant data, status flags (loading, error), and mutation functions, allowing easy integration into UI components.\n- Document hook usage and expected parameters, including examples for typical scenarios (e.g., checking if a user has a specific role, toggling role status).\n\nExample:\n```tsx\n// useRoles.ts\nexport function useRoles(userId) {\n  const [roles, setRoles] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    setLoading(true);\n    supabase\n      .from('roles')\n      .select('*')\n      .eq('user_id', userId)\n      .then(({ data, error }) => {\n        setRoles(data || []);\n        setError(error);\n        setLoading(false);\n      });\n  }, [userId]);\n\n  return { roles, loading, error };\n}\n```\n\nFollow React's rules of hooks and ensure hooks are composable and reusable[5][2].",
+        "testStrategy": "- Write unit tests for each hook to verify correct data fetching, mutation, and error handling using React Testing Library and Jest.\n- Mock Supabase client responses to simulate RLS enforcement and permission scenarios.\n- Test integration with user context to ensure hooks respect current user's permissions and roles.\n- Validate that unauthorized actions (e.g., adding/removing roles without permission) are blocked and return appropriate errors.\n- Perform manual tests to confirm hooks behave correctly in the UI, including loading states and error feedback.\n- Review code for compliance with React hook rules and best practices.",
+        "status": "done",
+        "dependencies": [
+          7
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Create Custom Hooks for User Permission Management with RLS and Modular Matrix Support",
+        "description": "Develop custom React hooks to manage and visualize user permissions, supporting role-based, direct, and module-specific permissions, while enforcing Row Level Security (RLS) policies.",
+        "details": "Implement a suite of custom hooks for granular permission management:\n\n- **usePermissionsMatrix**: Fetch and expose a matrix of permissions per module, combining role-based, direct, and inherited permissions. Query the Supabase backend using its client library, ensuring all permission reads respect RLS policies. Structure the matrix as `{ module: { action: boolean } }` for efficient lookups and UI rendering.\n\n- **useHasPermission**: Accepts a permission string or array (e.g., 'module:action') and returns a boolean indicating if the current user has the required permission, aggregating checks from roles, direct assignments, and module-level overrides. Leverage the current user context and cache results for performance.\n\n- **useViewPermissions**: Provides a unified API to visualize all permissions granted to a user, grouped by source (role, direct, module), supporting UI components for permission audits and admin dashboards.\n\n- **Integration with RLS**: All hooks must interact with Supabase tables protected by RLS, ensuring that permission queries and mutations are scoped to the current user's allowed rows. Use Supabase's built-in RLS enforcement and avoid exposing sensitive permission data.\n\n- **Extensibility**: Design hooks to support future permission sources (e.g., feature flags, external policies) and allow for custom logic injection via hook options.\n\n- **Type Safety and Error Handling**: Use TypeScript for all hooks, providing clear types for permission objects and robust error handling for backend failures or RLS denials.\n\nExample (usePermissionsMatrix):\n```tsx\nimport { useEffect, useState } from 'react';\nimport { supabase } from '../services/supabaseClient';\n\nexport const usePermissionsMatrix = (userId: string) => {\n  const [matrix, setMatrix] = useState<Record<string, Record<string, boolean>>>({});\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n\n  useEffect(() => {\n    if (!userId) return;\n    setLoading(true);\n    supabase\n      .rpc('get_user_permissions_matrix', { user_id: userId })\n      .then(({ data, error }) => {\n        if (error) setError(error.message);\n        else setMatrix(data);\n      })\n      .finally(() => setLoading(false));\n  }, [userId]);\n\n  return { matrix, loading, error };\n};\n```\n\nFollow best practices for permission aggregation, caching, and UI integration[1][2][3][4]. Document each hook with usage examples and edge case handling.",
+        "testStrategy": "- Write unit tests for each hook using React Testing Library and Jest, covering permission aggregation, RLS enforcement, and error scenarios.\n- Mock Supabase client responses to simulate various permission sources and RLS restrictions.\n- Test integration with user context and role management hooks to ensure correct permission resolution.\n- Validate the permission matrix structure and UI rendering for audit components.\n- Perform security tests to confirm that hooks do not leak unauthorized permission data and respect RLS boundaries.",
+        "status": "done",
+        "dependencies": [
+          7,
+          9
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Create Custom Hooks for User Activity and Log Management with RLS Compliance",
+        "description": "Develop a suite of custom React hooks to manage user activities, access logs, active sessions, and usage patterns, ensuring all operations respect Row Level Security (RLS) policies.",
+        "details": "Implement the following custom hooks to centralize and secure user activity and log management:\n\n- **useUserActivities**: Fetch and expose the user's recent activities (e.g., last accessed modules, actions, timestamps), filtering results based on the current user's permissions and RLS policies. Integrate with Supabase to query activity logs, ensuring data is scoped to the authorized user context.\n- **useAccessLogs**: Retrieve access logs grouped by module, providing insights into which modules the user has accessed, frequency, and duration. Apply RLS to ensure users only see their own logs or those they are permitted to view.\n- **useActiveSessions**: Track and manage the user's currently active sessions, including session start/end times and device/location metadata. Provide functions to invalidate sessions if needed, with all operations respecting RLS.\n- **useUsagePatterns**: Analyze and expose patterns in user behavior (e.g., peak usage times, frequently used modules, navigation flows) to support personalization and security audits. Aggregate data must adhere to RLS, ensuring users cannot access others' patterns.\n- **useLogger**: (Optional) Implement a hook for client-side logging of component lifecycle and user actions, useful for debugging and monitoring, while ensuring no sensitive data is logged in production[1].\n\n**Technical Approach**:\n- Use React's hooks API for state and side effects[2].\n- Leverage Supabase client library for secure, RLS-compliant data access, building on the integration established in Task 7.\n- Structure hooks to be composable and reusable across the application.\n- Ensure all data fetching and mutations are performed within the user's security context, leveraging Supabase RLS for row-level filtering.\n- Provide clear TypeScript interfaces for returned data and hook parameters.\n- Document each hook's purpose, parameters, return values, and RLS implications.\n\n**Example Hook Skeleton**:\n```tsx\n// Example: useUserActivities\nimport { useEffect, useState } from 'react';\nimport { supabase } from '../services/supabase';\n\nexport function useUserActivities(userId: string) {\n  const [activities, setActivities] = useState([]);\n  useEffect(() => {\n    const fetchActivities = async () => {\n      const { data, error } = await supabase\n        .from('user_activities')\n        .select('*')\n        .eq('user_id', userId);\n      if (!error) setActivities(data);\n    };\n    fetchActivities();\n  }, [userId]);\n  return activities;\n}\n```\n\n**Considerations**:\n- All hooks must be thoroughly typed and documented.\n- Performance: Consider pagination, caching, and debouncing for high-frequency data.\n- Security: Never expose raw logs or patterns without RLS enforcement.\n- Privacy: Ensure compliance with data protection regulations; anonymize or aggregate data where appropriate.\n- Extensibility: Design hooks to support future features like real-time updates via Supabase Realtime.",
+        "testStrategy": "1. **Unit Tests**: Write comprehensive unit tests for each hook using React Testing Library and Jest, covering data fetching, error handling, and RLS enforcement. Mock Supabase responses to simulate various permission and data scenarios.\n2. **Integration Tests**: Test hooks in combination with user context and permission management hooks (from Tasks 9 and 10) to ensure seamless security integration.\n3. **RLS Validation**: Manually and automatically verify that hooks respect RLS by testing with users of different permission levels, ensuring no data leakage.\n4. **Performance Testing**: Assess hook performance with large datasets, ensuring acceptable load times and memory usage.\n5. **Accessibility Testing**: Verify that any UI components consuming these hooks remain accessible, especially for activity timelines and log tables.\n6. **Security Audits**: Review hook implementations for potential security vulnerabilities, particularly around session management and log exposure.\n7. **Documentation Review**: Ensure all hooks are fully documented, including examples, TypeScript interfaces, and RLS requirements.",
+        "status": "done",
+        "dependencies": [
+          7,
+          9,
+          10
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Build Reusable Base Components for Roles, Permissions, Activities, and Management",
+        "description": "Develop a suite of reusable, interactive UI components—cards for roles and permissions, responsive tables for activities, and forms for management—using shadcn/ui and the Arruda Hub design system, ensuring full customization, accessibility, and consistency.",
+        "details": "Implement the following components as building blocks for the Arruda Hub admin interface, leveraging shadcn/ui’s copy-paste, own-your-code philosophy and Tailwind CSS for rapid, maintainable development[1].\n\n**Interactive Cards for Roles and Permissions**\n- Design and implement `<RoleCard />` and `<PermissionCard />` components that visually represent user roles and granular permissions, supporting hover, focus, and selected states.\n- Integrate with custom hooks from Task 10 (`usePermissionsMatrix`, `useHasPermission`) to dynamically render permission checks and role assignments.\n- Use shadcn/ui’s semantic design tokens (e.g., `--primary`, `--background`) for theming consistency, and ensure all interactive elements are fully accessible (keyboard navigable, ARIA labels, focus management)[1].\n- Support drag-and-drop reordering of roles and permissions where applicable, using React DnD or similar libraries.\n\n**Responsive Tables for Activities**\n- Build `<ActivityTable />` with server-side pagination, sorting, and filtering, using shadcn/ui’s table primitives and TanStack Table for advanced features like row selection and column customization[3].\n- Ensure the table adapts to mobile and desktop layouts using Tailwind’s responsive utilities (e.g., `sm:`, `lg:` breakpoints)[1].\n- Integrate with custom hooks from Task 11 (`useUserActivities`, `useAccessLogs`) to fetch and display activity data, respecting RLS policies.\n- Implement accessibility features: proper table semantics, keyboard navigation, and screen reader support.\n\n**Management Forms**\n- Create `<RoleForm />`, `<PermissionForm />`, and `<ActivityForm />` for creating, editing, and deleting records, using shadcn/ui’s form components and React Hook Form for validation and state management.\n- Ensure forms are fully accessible: logical tab order, error messaging, and ARIA attributes.\n- Support conditional fields and dynamic validation based on user permissions (using `useHasPermission` from Task 10).\n\n**Design System Integration**\n- Align all components with the Arruda Hub design system by extending shadcn/ui’s CSS variables and Tailwind config.\n- Use the shadcn/ui Figma kit as a reference for spacing, typography, and color tokens, ensuring design-to-code fidelity[2].\n- Document component APIs, usage guidelines, and customization options in Storybook or similar tools.\n\n**Best Practices**\n- All components are fully owned in the codebase (no opaque dependencies), following shadcn/ui’s pattern of direct source inclusion for maximum flexibility[1].\n- Compose smaller, atomic components (e.g., `<Badge />`, `<Button />`, `<Input />`) to build larger, domain-specific ones.\n- Prioritize performance: lazy-load heavy components, memoize expensive renders, and avoid unnecessary re-renders.\n- Ensure all interactive elements have clear visual feedback and are tested across devices and assistive technologies.",
+        "testStrategy": "1. **Unit Testing**: Write comprehensive unit tests for each component using React Testing Library and Jest, covering rendering, props, and interaction states (e.g., hover, focus, selection). Mock custom hooks to simulate various permission and data scenarios.\n2. **Integration Testing**: Test component integration with custom hooks (Tasks 10, 11) and Supabase services (Task 7), verifying correct data flow and RLS enforcement. Use MSW or similar tools to mock API responses.\n3. **Accessibility Testing**: Run automated a11y checks (jest-axe) and manual tests with screen readers (NVDA, VoiceOver) to ensure WCAG AA compliance. Validate keyboard navigation and focus management.\n4. **Responsiveness Testing**: Test components across breakpoints (mobile, tablet, desktop) using browser dev tools and real devices. Verify that tables, cards, and forms adapt correctly.\n5. **Visual Regression Testing**: Use tools like Chromatic or Storybook’s test runner to catch unintended UI changes.\n6. **End-to-End Testing**: Write Cypress or Playwright tests for critical user journeys (e.g., assigning a role, filtering activities, submitting a form).\n7. **Performance Testing**: Profile component load and interaction times, especially for data-heavy tables, and optimize as needed.",
+        "status": "done",
+        "dependencies": [
+          7,
+          9,
+          10,
+          11
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Implement User Details Page with Tabbed Layout and Integrated Hooks",
+        "description": "Develop a new user details page featuring a tabbed interface (Overview, Roles, Permissions, Projects, Activities, Settings), integrating all relevant custom hooks and components for data display and management.",
+        "details": "Implement the user details page as a React functional component using TypeScript and Tailwind CSS, following the project's design system and accessibility standards. Use a tabbed layout (e.g., shadcn/ui Tabs or Headless UI Tabs) to organize content into Overview, Roles, Permissions, Projects, Activities, and Settings. For each tab:\n\n- **Overview**: Display core user info, leveraging existing profile and metrics components.\n- **Roles**: Integrate the custom role management hooks (e.g., useRoles, useAddRole, useRemoveRole, useToggleRoleStatus) to list, add, remove, and toggle roles, ensuring UI reflects RLS-enforced permissions.\n- **Permissions**: Use the permissions matrix and related hooks (e.g., usePermissionsMatrix, useHasPermission) to visualize and manage user/module permissions, supporting both role-based and direct assignments.\n- **Projects**: List user-associated projects, using existing data-fetching hooks or services.\n- **Activities**: Embed the RecentActivity component to show user activity timeline and suggestions.\n- **Settings**: Provide user-specific configuration options, integrating with preference hooks/services.\n\nEnsure all data fetching and mutations use the Supabase integration, and that UI states (loading, error, empty) are handled gracefully using the project's UX patterns. Apply responsive design and WCAG AA accessibility best practices. Use TypeScript interfaces for props and state, and ensure all hooks/components are properly typed. Structure the page for easy extensibility and maintainability, and document component interfaces and integration points.",
+        "testStrategy": "- Write unit and integration tests for the UserDetailsPage component and each tab using React Testing Library and Jest.\n- Mock Supabase and custom hook responses to simulate various user roles, permissions, and data states (loading, error, empty, success).\n- Verify that tab navigation works correctly and that each tab displays the correct data and UI states.\n- Test role and permission management actions for correct RLS enforcement and UI feedback.\n- Perform accessibility testing (automated with jest-axe and manual with screen readers) to ensure WCAG AA compliance.\n- Validate responsiveness across breakpoints and devices.\n- Conduct usability testing for tab navigation and data management flows.",
+        "status": "done",
+        "dependencies": [
+          1,
+          7,
+          8,
+          9,
+          10
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Implement Advanced Role and Permission Management UI/UX",
+        "description": "Develop advanced user management features, including adding/removing roles, toggling permissions, robust form validation, confirmation dialogs for critical actions, and comprehensive visual feedback for all operations.",
+        "details": "Implement a modular React/TypeScript interface for advanced role and permission management, leveraging custom hooks (from prior tasks) and Supabase integration. Key features:\n\n- **Role Management Actions:**\n  - Add and remove roles from users with clear UI affordances (e.g., dropdowns, multi-selects, or modals).\n  - Toggle individual permissions (e.g., view, edit, delete) per role using switches or checkboxes, reflecting real-time state.\n  - Ensure all actions are permission-guarded using centralized role/permission logic (e.g., via useRoleManagement or similar hooks)[1][2].\n\n- **Form Validation:**\n  - Use schema-based validation (e.g., Zod or Yup) for all forms, enforcing required fields, valid role names, and permission constraints.\n  - Display inline validation errors and disable submission until all criteria are met.\n\n- **Critical Action Confirmations:**\n  - For destructive or sensitive actions (e.g., removing a role, revoking critical permissions), present confirmation dialogs (using shadcn/ui Dialog or similar) with clear messaging and explicit user consent.\n\n- **Visual Feedback:**\n  - Show loading indicators during async operations (e.g., role assignment, permission updates).\n  - Provide success and error toasts/snackbars for all operations, using a consistent notification system.\n  - Optimistically update UI state for responsiveness, with rollback on failure.\n\n- **Accessibility & Responsiveness:**\n  - Ensure all controls are keyboard-accessible and screen-reader friendly.\n  - Use ARIA attributes for dialogs and feedback components.\n  - Maintain responsive layouts for all management interfaces.\n\n- **Integration:**\n  - Integrate with existing custom hooks for role/permission management and Supabase backend.\n  - Ensure all UI state reflects backend changes and respects Row Level Security (RLS) constraints.\n\n- **Best Practices:**\n  - Centralize role/permission definitions for maintainability[1][2].\n  - Use context or hooks to propagate permission state throughout the UI.\n  - Write modular, reusable components for dialogs, forms, and feedback.\n\nExample (role removal confirmation):\n```tsx\nconst handleRemoveRole = async (roleId: string) => {\n  setDialogOpen(true);\n  // On confirm:\n  try {\n    await removeRole(roleId);\n    showToast('Role removed successfully', 'success');\n  } catch (e) {\n    showToast('Failed to remove role', 'error');\n  }\n};\n```\n",
+        "testStrategy": "- Write unit tests for all UI components (forms, dialogs, feedback) using React Testing Library and Jest.\n- Mock backend and hooks to simulate success, error, and permission-denied scenarios.\n- Test form validation logic with valid and invalid inputs.\n- Verify confirmation dialogs appear for critical actions and block unintended changes.\n- Test optimistic UI updates and rollback on failure.\n- Conduct accessibility tests (e.g., with jest-axe) for all interactive elements.\n- Perform manual and automated UI tests for responsiveness and keyboard navigation.",
+        "status": "done",
+        "dependencies": [
+          7,
+          8,
+          9,
+          13
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Test and Validate All Functionalities of the New User Details Page",
+        "description": "Comprehensively test and validate the new user details page, including RLS policies, responsiveness, performance, accessibility, and Supabase integration.",
+        "details": "Conduct a thorough validation of the user details page by implementing the following steps:\n\n- **RLS Policy Testing**: Verify that all data access and mutations strictly respect Row Level Security (RLS) policies configured in Supabase. Use mock users with different roles and permissions to ensure unauthorized access is blocked and permitted actions are correctly enforced. Simulate backend responses to test edge cases and error handling.\n\n- **Responsiveness Testing**: Use tools like BrowserStack or device emulators to validate the UI across a range of devices and screen sizes. Ensure all interactive elements and layouts adapt seamlessly using Tailwind CSS breakpoints and that no content is lost or misaligned.\n\n- **Performance Testing**: Measure page load times, data fetch latency, and UI responsiveness using Lighthouse and browser dev tools. Profile React component rendering and Supabase queries to identify bottlenecks. Optimize data fetching strategies (e.g., pagination, lazy loading) and minimize unnecessary re-renders.\n\n- **Accessibility Testing**: Validate compliance with WCAG AA standards using automated tools (e.g., jest-axe, axe-core) and manual testing with screen readers (NVDA, VoiceOver). Ensure keyboard navigation, ARIA attributes, color contrast, and focus management are correctly implemented. Test tab navigation and all interactive components for usability by users with disabilities.\n\n- **Supabase Integration Testing**: Mock Supabase client responses to simulate various data states (loading, error, success, permission denied). Test all CRUD operations and ensure error handling and feedback are robust. Validate that hooks and services correctly interact with Supabase and respect RLS.\n\n- **End-to-End Testing**: Use Cypress or Playwright to automate user flows, including navigation between tabs, role/permission changes, and activity log viewing. Ensure all features work together as expected in real-world scenarios.\n\nFollow best practices for React Testing Library and Jest for unit and integration tests, and ensure all test cases are isolated, repeatable, and cover edge cases.",
+        "testStrategy": "- Write unit and integration tests for all components and hooks using React Testing Library and Jest, covering rendering, data fetching, RLS enforcement, and error scenarios.\n- Use jest-axe and manual screen reader testing to validate accessibility compliance.\n- Employ device emulators and BrowserStack for responsive UI validation.\n- Run Lighthouse audits and browser profiling for performance analysis.\n- Mock Supabase responses to simulate different permission and data states.\n- Implement end-to-end tests with Cypress or Playwright to validate complete user flows, including tab navigation, role/permission management, and activity log access.\n- Document all test results and issues, and iterate until all acceptance criteria are met.",
+        "status": "done",
+        "dependencies": [
+          7,
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "priority": "high",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-09-30T02:35:34.650Z",
+      "updated": "2025-10-01T13:22:12.749Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

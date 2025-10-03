@@ -21,11 +21,13 @@ export interface UserRole {
   data_expiracao: string | null;
 }
 
+type AccessLevel = 'admin' | 'gestor' | 'visualizador';
+
 export interface UserProjectAccess {
   project_id: string;
   project_name: string;
   project_slug: string;
-  access_level: 'admin' | 'gestor' | 'visualizador';
+  access_level: AccessLevel;
   created_at: string;
 }
 
@@ -109,7 +111,7 @@ export const useUserDetails = (userId: string | undefined) => {
         project_id: access.projects?.id || '',
         project_name: access.projects?.nome || '',
         project_slug: access.projects?.slug || '',
-        access_level: access.nivel_acesso as 'admin' | 'gestor' | 'visualizador',
+        access_level: access.nivel_acesso as AccessLevel,
         created_at: access.created_at,
       })) || [];
 
@@ -129,21 +131,25 @@ export const useUserDetails = (userId: string | undefined) => {
   };
 
   useEffect(() => {
-    fetchUserDetails();
+    if (userId && userId.trim() !== '') {
+      fetchUserDetails();
+    } else {
+      setLoading(false);
+    }
   }, [userId]);
 
   const updateProjectAccess = async (
     projectId: string,
-    accessLevel: 'admin' | 'gestor' | 'visualizador',
-    grantAccess: boolean
+    grantAccess: boolean,
+    accessLevel?: AccessLevel
   ) => {
     if (!userId) return false;
 
     try {
-      const { data, error } = await supabase.rpc('update_user_project_access', {
+      const { error } = await supabase.rpc('update_user_project_access', {
         _user_id: userId,
         _project_id: projectId,
-        _access_level: accessLevel,
+        _access_level: accessLevel || 'visualizador',
         _grant_access: grantAccess
       });
 

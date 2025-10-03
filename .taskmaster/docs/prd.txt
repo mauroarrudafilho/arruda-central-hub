@@ -1,0 +1,94 @@
+# PRD: Melhorias da Página de Módulos Global - Arruda Hub
+
+## Objetivo
+Implementar melhorias minimalistas na página Hub do sistema Arruda Hub, mantendo o design system corporativo e adicionando funcionalidades essenciais para uma experiência de usuário premium.
+
+## Contexto
+A página atual do Hub funciona, mas precisa de melhorias para se tornar uma verdadeira página de módulos global. O foco é manter o minimalismo do design system Arruda Hub (inspirado em IBM Carbon, Linear, Vercel) com funcionalidades essenciais.
+
+## Requisitos Funcionais
+
+### 1. Header Melhorado
+- User profile com avatar e role (discreto)
+- Barra de busca para encontrar módulos rapidamente
+- Status da sessão mais visível mas discreto
+- Manter identidade visual: Navy (#0A2342), Teal, tipografia Inter
+
+### 2. Dashboard de Métricas Simples
+- 3-4 KPIs essenciais: Total de módulos, acessos hoje, tempo online
+- Gráfico simples de uso por módulo usando Tremor
+- Alertas discretos para módulos com problemas
+- Cards usando shadcn/ui com radius 8-12px
+
+### 3. Funcionalidades de Busca e Filtro
+- Barra de busca para encontrar módulos
+- Filtros por status: Disponível, Em desenvolvimento, Manutenção
+- Ordenação: Por nome, uso recente, popularidade
+- Interface minimalista sem categorias
+
+### 4. Atividade Recente
+- Timeline dos últimos acessos
+- Módulos favoritos ou mais usados
+- Sugestões baseadas no perfil do usuário
+- Componentes shadcn/ui para consistência
+
+### 5. Melhorias de UX
+- Loading states mais sofisticados
+- Empty states quando não há módulos
+- Tooltips informativos nos módulos
+- Keyboard shortcuts para power users
+- Microinterações sutis (hover/active states)
+
+## Requisitos Técnicos
+
+### Design System
+- Manter paleta: Navy (#0A2342), Teal gradiente, Branco, Cinza neutro
+- Tipografia: Inter, pesos leve-médio para textos, forte para títulos
+- Componentes: shadcn/ui para cards, tabelas, tooltips, badges
+- Gráficos: Tremor dentro de <Card>
+- Spacing: múltiplos de 8/12/16/24
+- Acessibilidade: WCAG AA
+
+### Tecnologias
+- React + TypeScript
+- Tailwind CSS
+- shadcn/ui components
+- Tremor para gráficos
+- Supabase para dados
+- Design tokens existentes
+
+### Módulos a Considerar
+- Comercial+ (disponível)
+- Financeiro (disponível) 
+- Degustações (disponível)
+- Always On (em desenvolvimento)
+- Faturamento Fornecedores (em desenvolvimento)
+- Logística (em desenvolvimento)
+- Trade Marketing (em desenvolvimento)
+- Reembolsos (em desenvolvimento)
+- Analytics (disponível)
+- Gestor de Comissão (planejado)
+- Gestor de Pricing (planejado)
+- Acordos Comerciais (planejado)
+- LMS (planejado)
+- Meus Produtos (planejado)
+- Cliente 360º (planejado)
+- Flex Tracker (planejado)
+- Módulo de Ingestão (planejado)
+
+## Critérios de Sucesso
+- Interface minimalista e profissional
+- 100% alinhado com DS da Arruda Hub
+- Funcionalidades essenciais implementadas
+- Performance otimizada
+- Acessibilidade WCAG AA
+- Responsividade mantida
+- Experiência de usuário premium
+
+## Prioridades
+1. Header melhorado (user profile + busca)
+2. Dashboard de métricas simples (3-4 KPIs)
+3. Funcionalidades de busca e filtro
+4. Atividade recente
+5. Melhorias de UX (loading, empty states, tooltips)
+

@@ -313,7 +313,7 @@ const Roles = () => {
               <div key={role.id} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold">{role.nome}</h3>
-                  <Badge variant={role.ativo ? "default" : "secondary"}>
+                  <Badge className={role.ativo ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-gray-100 text-gray-800 hover:bg-gray-100"}>
                     {role.ativo ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </div>
@@ -380,7 +380,7 @@ const Roles = () => {
                     <th key={role.id} className="text-center p-3 border-b font-semibold min-w-24">
                       <div className="flex flex-col items-center gap-1">
                         <span>{role.nome}</span>
-                        <Badge variant={role.ativo ? "default" : "secondary"} className="text-xs">
+                        <Badge className={role.ativo ? "bg-green-100 text-green-800 hover:bg-green-100 text-xs" : "bg-gray-100 text-gray-800 hover:bg-gray-100 text-xs"}>
                           {role.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </div>
@@ -396,7 +396,7 @@ const Roles = () => {
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4" />
                           {module}
-                          <Badge variant="outline" className="ml-auto">
+                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 ml-auto">
                             {modulePermissions.length} permissões
                           </Badge>
                         </div>

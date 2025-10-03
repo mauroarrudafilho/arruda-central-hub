@@ -1,0 +1,41 @@
+{
+  "name": "@arruda/design-system",
+  "version": "1.0.0",
+  "description": "Design System padrão do Arruda Hub",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo 'Build do design system'",
+    "dev": "echo 'Desenvolvimento do design system'",
+    "lint": "echo 'Lint do design system'"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "lucide-react": "^0.462.0",
+    "recharts": "^2.15.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "design-system",
+    "react",
+    "components",
+    "arruda",
+    "ui",
+    "shadcn"
+  ],
+  "author": "Arruda Hub",
+  "license": "MIT"
+}
+

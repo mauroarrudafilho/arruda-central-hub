@@ -1,5 +1,6 @@
 import { useAuthState } from '@/hooks/useAuth';
 import { Navigate, useLocation } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -20,6 +21,20 @@ export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) =>
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Verificar se o email foi confirmado
+  if (!user.email_confirmed_at) {
+    // Mostrar toast apenas uma vez
+    if (!sessionStorage.getItem('email-confirmation-shown')) {
+      toast({
+        title: "Email não confirmado",
+        description: "Por favor, confirme seu email antes de acessar o sistema.",
+        variant: "destructive",
+      });
+      sessionStorage.setItem('email-confirmation-shown', 'true');
+    }
+    return <Navigate to="/auth" state={{ from: location, requireEmailConfirmation: true }} replace />;
   }
 
   if (requireAdmin && !isAdmin) {

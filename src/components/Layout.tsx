@@ -1,6 +1,5 @@
-import { Users, Shield, Activity, User, LogOut, Building2 } from 'lucide-react';
+import { Users, Shield, Activity, User, LogOut, Building2, Home } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import * as Icons from 'lucide-react';
 import { useEffect } from 'react';
 import {
   Sidebar,
@@ -20,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { useAuthState } from '@/hooks/useAuth';
 import { useProjects, useProjectModules } from '@/hooks/useProjects';
 import { useProjectContext } from '@/contexts/ProjectContext';
-import { ProjectSelector } from '@/components/ProjectSelector';
 
 function AppSidebar() {
   const { state } = useSidebar();
@@ -55,6 +53,7 @@ function AppSidebar() {
     User,
     Building2,
     LogOut,
+    Home,
   };
 
   // Função para obter ícone dinâmico
@@ -71,12 +70,17 @@ function AppSidebar() {
       <SidebarHeader>
         <div className="p-4">
           {!isCollapsed && (
-            <h2 className="text-lg font-semibold text-sidebar-foreground">
-              Sistema de Gestão
-            </h2>
+            <div className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-sidebar-foreground">
+                Sistema de Gestão
+              </h2>
+            </div>
           )}
           {isCollapsed && (
-            <Building2 className="h-4 w-4 mx-auto" />
+            <div className="flex justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
           )}
         </div>
       </SidebarHeader>
@@ -89,43 +93,64 @@ function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {modulesLoading ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    {isCollapsed ? "..." : "Carregando módulos..."}
-                  </div>
-                ) : modules.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    {isCollapsed ? "❌" : "Nenhum módulo disponível"}
-                  </div>
-                ) : (
-                  modules.map((module) => {
-                    const IconComponent = getIcon(module.icone);
+                {(() => {
+                  if (modulesLoading) {
                     return (
-                      <SidebarMenuItem key={module.id}>
-                        <SidebarMenuButton asChild>
-                          <NavLink 
-                            to={module.rota}
-                            end
-                            className={({ isActive }) => 
-                              isActive 
-                                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-                                : 'hover:bg-sidebar-accent/50'
-                            }
-                          >
-                            <IconComponent className="h-4 w-4" />
-                            {!isCollapsed && <span>{module.nome}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                      <div className="p-2 text-sm text-muted-foreground">
+                        {isCollapsed ? "..." : "Carregando módulos..."}
+                      </div>
                     );
-                  })
-                )}
+                  }
+                  
+                  if (modules.length === 0) {
+                    return (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        {isCollapsed ? "❌" : "Nenhum módulo disponível"}
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    modules.map((module) => {
+                      const IconComponent = getIcon(module.icone);
+                      return (
+                        <SidebarMenuItem key={module.id}>
+                          <SidebarMenuButton asChild>
+                            <NavLink 
+                              to={module.rota}
+                              end
+                              className={({ isActive }) => 
+                                isActive 
+                                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
+                                  : 'hover:bg-sidebar-accent/50'
+                              }
+                            >
+                              <IconComponent className="h-4 w-4" />
+                              {!isCollapsed && <span>{module.nome}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })
+                  );
+                })()}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
-        <div className="mt-auto p-4">
+        <div className="mt-auto p-4 space-y-2">
+          {/* Botão para voltar ao Hub */}
+          <Button 
+            onClick={() => navigate('/hub')}
+            variant="ghost" 
+            size="sm"
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <Home className="h-4 w-4" />
+            {!isCollapsed && <span className="ml-2">Voltar ao Hub</span>}
+          </Button>
+          
           {!isCollapsed && (
             <div className="text-xs text-sidebar-foreground/70 mb-2">
               {user?.email}
@@ -161,10 +186,19 @@ export const Layout = ({ children }: LayoutProps) => {
         <div className="flex-1 flex flex-col">
           <header className="h-14 flex items-center border-b border-border bg-card px-4">
             <SidebarTrigger />
-            <div className="ml-4">
+            <div className="ml-4 flex items-center space-x-4">
               <h1 className="text-lg font-semibold text-card-foreground">
                 {currentProject?.nome || "Sistema de Gestão"}
               </h1>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/hub')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Hub
+              </Button>
             </div>
           </header>
           

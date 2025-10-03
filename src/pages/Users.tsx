@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Download, Filter } from 'lucide-react';
+import { Plus, Search, Download, Edit, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DataTable } from '@/components/DataTable';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { useDesignTokens } from '@/hooks/useDesignTokens';
 
 interface User {
   id: string;
@@ -24,6 +25,7 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+  const designTokens = useDesignTokens();
 
   useEffect(() => {
     fetchUsers();
@@ -94,53 +96,6 @@ const Users = () => {
     user.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const columns = [
-    {
-      accessorKey: 'nome',
-      header: 'Nome',
-    },
-    {
-      accessorKey: 'email',
-      header: 'E-mail',
-    },
-    {
-      accessorKey: 'roles',
-      header: 'Papéis',
-      cell: ({ row }: any) => (
-        <div className="flex gap-1 flex-wrap">
-          {row.original.roles.map((role: string) => (
-            <Badge key={role} variant="secondary" className="text-xs">
-              {role}
-            </Badge>
-          ))}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }: any) => (
-        <Badge 
-          variant={row.original.status === 'ativo' ? 'default' : 'destructive'}
-        >
-          {row.original.status}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: 'ultimo_login',
-      header: 'Último Login',
-      cell: ({ row }: any) => {
-        const date = row.original.ultimo_login;
-        return date ? new Date(date).toLocaleDateString('pt-BR') : 'Nunca';
-      },
-    },
-    {
-      accessorKey: 'created_at',
-      header: 'Criado em',
-      cell: ({ row }: any) => new Date(row.original.created_at).toLocaleDateString('pt-BR'),
-    },
-  ];
 
   const handleExport = () => {
     const csvContent = [
@@ -203,12 +158,105 @@ const Users = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={filteredUsers}
-            loading={loading}
-            onRowClick={(user: User) => navigate(`/users/${user.id}`)}
-          />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead>Último Login</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Nenhum usuário encontrado
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell onClick={() => navigate(`/users/${user.id}`)}>
+                      <div>
+                        <div className="font-medium">{user.nome}</div>
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        className="hover:opacity-80"
+                        style={{
+                          backgroundColor: user.status === 'ativo' 
+                            ? designTokens.badgeColors.success.bg 
+                            : designTokens.badgeColors.destructive.bg,
+                          color: user.status === 'ativo' 
+                            ? designTokens.badgeColors.success.text 
+                            : designTokens.badgeColors.destructive.text,
+                        }}
+                      >
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                          <Badge 
+                            key={role} 
+                            className="hover:opacity-80 text-xs"
+                            style={{
+                              backgroundColor: designTokens.badgeColors.info.bg,
+                              color: designTokens.badgeColors.info.text,
+                            }}
+                          >
+                            {role}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {user.ultimo_login ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') : 'Nunca'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => navigate(`/users/${user.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => navigate(`/users/${user.id}/edit`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

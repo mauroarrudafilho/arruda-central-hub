@@ -1,0 +1,42 @@
+{
+  "name": "@arruda/rbac-client",
+  "version": "1.0.0",
+  "description": "Biblioteca compartilhada para autenticação e controle de acesso - Arruda Hub",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "rbac",
+    "authentication",
+    "authorization",
+    "react",
+    "supabase"
+  ],
+  "author": "Arruda Hub",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "@supabase/supabase-js": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/react": "^18.2.0",
+    "rollup": "^4.9.6",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "zustand": "^4.4.7"
+  }
+}
+

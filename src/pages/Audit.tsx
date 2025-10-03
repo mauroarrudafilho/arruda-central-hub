@@ -1,147 +1,176 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { SecurityLogger } from '@/lib/security-logger';
+import { 
+  Users, 
+  Activity, 
+  Search,
+  Download,
+  RefreshCw,
+  Shield
+} from 'lucide-react';
 
 interface AuditLog {
   id: string;
   user_id: string;
-  acao: string;
-  modulo: string;
-  recurso_tipo: string;
-  recurso_id: string;
-  nivel: string;
-  dados_anteriores: any;
-  dados_novos: any;
-  ip_address: string | null;
-  user_agent: string | null;
+  user_email: string;
+  action: string;
+  resource_type: string;
+  resource_path: string;
+  success: boolean;
+  ip_address: string;
+  user_agent: string;
   created_at: string;
-  auth_profile?: {
-    nome: string;
-    email: string;
-  };
+  response_time_ms: number;
+  metadata: any;
+}
+
+interface SecurityEvent {
+  id: string;
+  user_id: string;
+  user_email: string;
+  event_type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  ip_address: string;
+  created_at: string;
+  resolved: boolean;
 }
 
 const Audit = () => {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [moduleFilter, setModuleFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [filterSuccess, setFilterSuccess] = useState('all');
 
   useEffect(() => {
-    fetchAuditLogs();
+    fetchAuditData();
   }, []);
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditData = async () => {
     try {
       setLoading(true);
-      
-      // Buscar logs de auditoria
-      const { data: auditData, error: auditError } = await supabase
-        .from('auth_audit')
-        .select('*')
+
+      // Buscar logs de auditoria (resource_access_log)
+      const { data: auditData } = await supabase
+        .from('resource_access_log')
+        .select(`
+          id,
+          user_id,
+          action,
+          resource_type,
+          resource_path,
+          success,
+          ip_address,
+          user_agent,
+          created_at,
+          response_time_ms,
+          metadata,
+          auth_profile!inner(email)
+        `)
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (auditError) throw auditError;
+      // Processar logs de auditoria
+      const logs: AuditLog[] = auditData?.map(log => ({
+        id: log.id,
+        user_id: log.user_id,
+        user_email: log.auth_profile?.email || 'Usuário desconhecido',
+        action: log.action,
+        resource_type: log.resource_type,
+        resource_path: log.resource_path,
+        success: log.success,
+        ip_address: log.ip_address || 'N/A',
+        user_agent: log.user_agent || 'N/A',
+        created_at: log.created_at,
+        response_time_ms: log.response_time_ms || 0,
+        metadata: log.metadata
+      })) || [];
 
-      // Buscar perfis dos usuários que aparecem nos logs
-      const userIds = [...new Set(auditData?.map(log => log.user_id).filter(Boolean) || [])];
+      // Buscar logs de segurança
+      const securityLogs = await SecurityLogger.getSecurityLogs({ limit: 100 });
       
-      let profilesData: any[] = [];
-      if (userIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from('auth_profile')
-          .select('user_id, nome, email')
-          .in('user_id', userIds);
+      // Converter logs de segurança para eventos de segurança
+      const securityEvents: SecurityEvent[] = securityLogs
+        .filter(log => ['high', 'critical'].includes(log.severity) || !log.success)
+        .map(log => ({
+          id: log.id,
+          user_id: log.user_id || '',
+          user_email: log.auth_profile?.email || 'Sistema',
+          event_type: log.event_type,
+          severity: log.severity,
+          description: log.description,
+          ip_address: log.ip_address || 'N/A',
+          created_at: log.created_at,
+          resolved: false
+        }));
 
-        if (profilesError) {
-          console.warn('Error fetching user profiles:', profilesError);
-        } else {
-          profilesData = profiles || [];
-        }
-      }
+      setAuditLogs(logs);
+      setSecurityEvents(securityEvents);
 
-      // Combinar dados
-      const logsWithProfiles = (auditData || []).map(log => {
-        const profile = profilesData.find(p => p.user_id === log.user_id);
-        return {
-          ...log,
-          ip_address: log.ip_address as string || null,
-          user_agent: log.user_agent as string || null,
-          auth_profile: profile ? { nome: profile.nome, email: profile.email } : undefined
-        };
-      });
-
-      setLogs(logsWithProfiles);
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar logs de auditoria",
-        variant: "destructive",
-      });
+      console.error('Error fetching audit data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.acao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.modulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.auth_profile?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.auth_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesModule = moduleFilter === 'all' || log.modulo === moduleFilter;
-    const matchesLevel = levelFilter === 'all' || log.nivel === levelFilter;
-
-    return matchesSearch && matchesModule && matchesLevel;
-  });
-
-  const modules = [...new Set(logs.map(log => log.modulo))];
-
-  const getLevelBadge = (level: string) => {
-    switch (level) {
-      case 'error':
-        return <Badge variant="destructive">Erro</Badge>;
-      case 'warning':
-        return <Badge variant="secondary">Aviso</Badge>;
-      case 'info':
-      default:
-        return <Badge variant="default">Info</Badge>;
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'critical': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const getSuccessColor = (success: boolean) => {
+    return success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const handleExport = () => {
+  const getSuccessBadgeText = (success: boolean) => {
+    return success ? 'Sucesso' : 'Falha';
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
+  };
+
+  const filteredLogs = auditLogs.filter(log => {
+    const matchesSearch = log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.resource_path.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === 'all' || log.resource_type === filterType;
+    const matchesSuccess = filterSuccess === 'all' || 
+                          (filterSuccess === 'success' && log.success) ||
+                          (filterSuccess === 'failure' && !log.success);
+
+    return matchesSearch && matchesType && matchesSuccess;
+  });
+
+  const exportLogs = () => {
     const csvContent = [
-      ['Data/Hora', 'Usuário', 'Email', 'Módulo', 'Ação', 'Nível', 'IP', 'User Agent'],
+      ['Data', 'Usuário', 'Ação', 'Tipo', 'Recurso', 'Sucesso', 'IP', 'Tempo Resposta'],
       ...filteredLogs.map(log => [
-        formatDateTime(log.created_at),
-        log.auth_profile?.nome || 'Sistema',
-        log.auth_profile?.email || '-',
-        log.modulo,
-        log.acao,
-        log.nivel,
-        log.ip_address || '-',
-        log.user_agent || '-'
+        formatTimestamp(log.created_at),
+        log.user_email,
+        log.action,
+        log.resource_type,
+        log.resource_path,
+        log.success ? 'Sim' : 'Não',
+        log.ip_address,
+        log.response_time_ms + 'ms'
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -149,153 +178,233 @@ const Audit = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'audit-logs.csv';
+    a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auditoria</h1>
-          <p className="text-muted-foreground">
-            Acompanhe as atividades do sistema
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Auditoria</h1>
+          <p className="text-gray-600">Logs de acesso e eventos de segurança</p>
         </div>
-        <Button onClick={handleExport} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Exportar
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={exportLogs} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+          <Button onClick={fetchAuditData} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por ação, módulo, usuário..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <Select value={moduleFilter} onValueChange={setModuleFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Módulo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os módulos</SelectItem>
-            {modules.map(module => (
-              <SelectItem key={module} value={module}>
-                {module}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Tabs defaultValue="logs" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="logs">Log de Usuários</TabsTrigger>
+          <TabsTrigger value="access">Log de Acessos</TabsTrigger>
+          <TabsTrigger value="security">Log de Segurança</TabsTrigger>
+        </TabsList>
 
-        <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-full sm:w-32">
-            <SelectValue placeholder="Nível" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="info">Info</SelectItem>
-            <SelectItem value="warning">Aviso</SelectItem>
-            <SelectItem value="error">Erro</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Logs de Auditoria</CardTitle>
-          <CardDescription>
-            {filteredLogs.length} registro(s) encontrado(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum log encontrado
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredLogs.map((log) => (
-                <div key={log.id} className="border rounded-lg p-4 hover:bg-muted/20">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        {getLevelBadge(log.nivel)}
-                        <Badge variant="outline" className="text-xs">
-                          {log.modulo}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDateTime(log.created_at)}
-                        </span>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <span className="font-medium">{log.acao}</span>
-                        {log.recurso_tipo && (
-                          <span className="text-muted-foreground ml-2">
-                            em {log.recurso_tipo}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="text-sm text-muted-foreground">
-                        <span>
-                          Por: {log.auth_profile?.nome || 'Sistema'} 
-                          {log.auth_profile?.email && ` (${log.auth_profile.email})`}
-                        </span>
-                        {log.ip_address && (
-                          <span className="ml-4">IP: {log.ip_address}</span>
-                        )}
-                      </div>
-
-                      {(log.dados_anteriores || log.dados_novos) && (
-                        <details className="mt-2">
-                          <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
-                            Ver detalhes das alterações
-                          </summary>
-                          <div className="mt-2 p-3 bg-muted/30 rounded text-xs">
-                            {log.dados_anteriores && (
-                              <div className="mb-2">
-                                <strong>Antes:</strong>
-                                <pre className="mt-1 overflow-x-auto">
-                                  {JSON.stringify(log.dados_anteriores, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                            {log.dados_novos && (
-                              <div>
-                                <strong>Depois:</strong>
-                                <pre className="mt-1 overflow-x-auto">
-                                  {JSON.stringify(log.dados_novos, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                          </div>
-                        </details>
-                      )}
+        {/* Log de Usuários */}
+        <TabsContent value="logs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-blue-500" />
+                <span>Atividades dos Usuários</span>
+              </CardTitle>
+              <CardDescription>
+                Histórico completo de ações realizadas pelos usuários
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Filtros */}
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-64">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por usuário, ação ou recurso..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
                   </div>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Tipo de recurso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="page">Páginas</SelectItem>
+                      <SelectItem value="api">APIs</SelectItem>
+                      <SelectItem value="login">Login</SelectItem>
+                      <SelectItem value="data">Dados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterSuccess} onValueChange={setFilterSuccess}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="success">Sucesso</SelectItem>
+                      <SelectItem value="failure">Falha</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                {/* Lista de logs */}
+                <div className="space-y-2">
+                  {filteredLogs.map((log) => (
+                    <div key={log.id} className="p-4 border rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Badge className={getSuccessColor(log.success)}>
+                              {getSuccessBadgeText(log.success)}
+                            </Badge>
+                            <Badge variant="outline">{log.resource_type}</Badge>
+                          </div>
+                          <div>
+                            <p className="font-medium">{log.user_email}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {log.action} - {log.resource_path}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">
+                            {formatTimestamp(log.created_at)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {log.response_time_ms}ms
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Log de Acessos */}
+        <TabsContent value="access" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Activity className="h-5 w-5 text-green-500" />
+                <span>Log de Acessos</span>
+              </CardTitle>
+              <CardDescription>
+                Detalhamento de todos os acessos ao sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {auditLogs.slice(0, 50).map((log) => (
+                  <div key={log.id} className="p-4 border rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Usuário</p>
+                        <p className="text-sm text-muted-foreground">{log.user_email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Ação</p>
+                        <p className="text-sm text-muted-foreground">{log.action}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Recurso</p>
+                        <p className="text-sm text-muted-foreground">{log.resource_path}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Status</p>
+                        <Badge className={getSuccessColor(log.success)}>
+                          {getSuccessBadgeText(log.success)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-muted-foreground">
+                        <div>
+                          <span className="font-medium">IP:</span> {log.ip_address}
+                        </div>
+                        <div>
+                          <span className="font-medium">Tempo:</span> {log.response_time_ms}ms
+                        </div>
+                        <div>
+                          <span className="font-medium">Data:</span> {formatTimestamp(log.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Log de Segurança */}
+        <TabsContent value="security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-red-500" />
+                <span>Eventos de Segurança</span>
+              </CardTitle>
+              <CardDescription>
+                Alertas e eventos relacionados à segurança
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {securityEvents.map((event) => (
+                  <div key={event.id} className="p-4 border rounded-lg border-red-200 bg-red-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <Badge className={getSeverityColor(event.severity)}>
+                          {event.severity.toUpperCase()}
+                        </Badge>
+                        <div>
+                          <p className="font-medium">{event.user_email}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {event.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {formatTimestamp(event.created_at)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          IP: {event.ip_address}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

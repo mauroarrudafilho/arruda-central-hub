@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { securityLogger } from '@/lib/security-logger';
 
 interface AuthContextType {
   user: User | null;
@@ -44,12 +45,29 @@ export const useAuthState = () => {
                 .rpc('user_is_admin', { user_id: session.user.id });
               
               if (!error) {
+                console.log('Admin check result:', data);
                 setIsAdmin(data || false);
+              } else {
+                console.error('Error checking admin status:', error);
+                // Fallback: check directly in the database
+                const { data: roleData } = await supabase
+                  .from('auth_user_role')
+                  .select('role_id, auth_role!inner(nome)')
+                  .eq('user_id', session.user.id)
+                  .eq('ativo', true)
+                  .single();
+                
+                if (roleData?.auth_role?.nome === 'admin') {
+                  setIsAdmin(true);
+                } else {
+                  setIsAdmin(false);
+                }
               }
             } catch (err) {
               console.error('Error checking admin status:', err);
+              setIsAdmin(false);
             }
-          }, 0);
+          }, 100);
         } else {
           setIsAdmin(false);
         }
@@ -70,22 +88,54 @@ export const useAuthState = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        // Log de tentativa de login falhada
+        await securityLogger.logLoginAttempt(email, false, error.message);
+        
         toast({
           title: "Erro no login",
           description: error.message,
           variant: "destructive",
+        });
+      } else {
+        // Log de login bem-sucedido
+        await securityLogger.logLoginAttempt(email, true);
+        
+        // Log de sessão criada
+        await securityLogger.log({
+          user_id: data.user?.id,
+          event_type: 'login_success',
+          severity: 'low',
+          description: `Login realizado com sucesso para ${email}`,
+          action: 'login',
+          success: true,
+          metadata: { 
+            email,
+            session_id: data.session?.access_token?.substring(0, 20) + '...'
+          }
         });
       }
 
       return { error };
     } catch (err) {
       const error = err as Error;
+      
+      // Log de erro crítico
+      await securityLogger.log({
+        event_type: 'system_error',
+        severity: 'high',
+        description: `Erro crítico no sistema de login: ${error.message}`,
+        action: 'login',
+        success: false,
+        error_message: error.message,
+        metadata: { email }
+      });
+      
       toast({
         title: "Erro no login",
         description: error.message,
@@ -97,7 +147,7 @@ export const useAuthState = () => {
 
   const signUp = async (email: string, password: string, nome: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/confirm-email`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -135,8 +185,55 @@ export const useAuthState = () => {
     }
   };
 
+  const resendConfirmation = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/confirm-email`,
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao reenviar confirmação",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Email reenviado",
+        description: "Verifique sua caixa de entrada para o novo link de confirmação.",
+      });
+
+      return { error: null };
+    } catch (err) {
+      const error = err as Error;
+      toast({
+        title: "Erro ao reenviar confirmação",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     try {
+      // Log de logout
+      await securityLogger.log({
+        user_id: user?.id,
+        event_type: 'logout',
+        severity: 'low',
+        description: `Logout realizado por ${user?.email}`,
+        action: 'logout',
+        success: true,
+        metadata: { email: user?.email }
+      });
+
       await supabase.auth.signOut();
       toast({
         title: "Logout realizado",
@@ -144,6 +241,17 @@ export const useAuthState = () => {
       });
     } catch (err) {
       console.error('Error signing out:', err);
+      
+      // Log de erro no logout
+      await securityLogger.log({
+        user_id: user?.id,
+        event_type: 'system_error',
+        severity: 'medium',
+        description: `Erro durante logout: ${err}`,
+        action: 'logout',
+        success: false,
+        error_message: err instanceof Error ? err.message : 'Erro desconhecido'
+      });
     }
   };
 
@@ -154,6 +262,7 @@ export const useAuthState = () => {
     signIn,
     signUp,
     signOut,
+    resendConfirmation,
     isAdmin,
   };
 };
