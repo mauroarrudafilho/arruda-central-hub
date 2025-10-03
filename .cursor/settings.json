@@ -1,0 +1,23 @@
+{
+  "autoApply": true,
+  "autoCommit": true,
+  "autoPush": true,
+  "deployOnPush": true,
+  "vercelIntegration": {
+    "enabled": true,
+    "autoDeploy": true,
+    "projectId": "YOUR_PROJECT_ID",
+    "teamId": "YOUR_TEAM_ID"
+  },
+  "githubIntegration": {
+    "enabled": true,
+    "autoCommit": true,
+    "autoPush": true,
+    "commitMessage": "feat: {description} - Auto-deployed by Cursor"
+  },
+  "rules": {
+    "applyAutomatically": true,
+    "requireConfirmation": false,
+    "logChanges": true
+  }
+}

@@ -1,0 +1,30 @@
+---
+description: Configuração para autorização automática de mudanças e deploy
+globs: ["**/*.tsx", "**/*.ts", "**/*.js", "**/*.jsx"]
+alwaysApply: true
+---
+
+# Autorização Automática de Mudanças
+
+## **Permissões Automáticas**
+- **Aplicar mudanças automaticamente** em arquivos TypeScript/JavaScript
+- **Fazer commits automáticos** após correções de linting
+- **Fazer push automático** para o branch main
+- **Triggerar deploy automático** no Vercel
+
+## **Regras de Deploy**
+- Deploy automático apenas em mudanças no branch `main`
+- Verificar se o build passa antes do deploy
+- Notificar sobre status do deploy
+
+## **Fluxo de Trabalho**
+1. **Detectar mudanças** no código
+2. **Aplicar correções** automaticamente
+3. **Fazer commit** com mensagem descritiva
+4. **Fazer push** para GitHub
+5. **Triggerar deploy** no Vercel via GitHub Actions
+
+## **Limitações**
+- Não fazer mudanças em arquivos de configuração críticos
+- Sempre testar localmente antes do deploy
+- Manter logs de todas as mudanças automáticas
