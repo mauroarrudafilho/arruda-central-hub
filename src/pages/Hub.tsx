@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthState } from '@/hooks/useAuth';
@@ -30,7 +30,7 @@ interface Module {
   display_name: string;
   description: string;
   url: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   hasAccess: boolean;
   lastAccess?: string;
 }
@@ -51,12 +51,7 @@ const Hub = () => {
   const designTokens = useDesignTokens();
   const { isFavorite, toggleFavorite } = useUserPreferences();
 
-  useEffect(() => {
-    fetchUserModules();
-    fetchUserStats();
-  }, []);
-
-  const fetchUserModules = async () => {
+  const fetchUserModules = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -80,17 +75,8 @@ const Hub = () => {
                 { name: 'acordos-comerciais', display_name: 'Acordos Comerciais', icon: FileText }
               ];
 
-      const { data: lastAccessData } = await supabase
-        .from('user_sessions')
-        .select('frontend_module, last_activity')
-        .eq('user_id', user?.id)
-        .order('last_activity', { ascending: false });
-
+      // Simular dados de último acesso (já que a tabela user_sessions não existe)
       const modulesWithAccess: Module[] = predefinedModules.map((module) => {
-        const lastAccess = lastAccessData?.find(
-          access => access.frontend_module === module.name
-        );
-
         return {
           id: module.name,
           name: module.name,
@@ -99,7 +85,7 @@ const Hub = () => {
           url: `/${module.name}`,
           icon: module.icon,
           hasAccess: checkModuleAccess(module.name),
-          lastAccess: lastAccess?.last_activity,
+          lastAccess: undefined, // Removido por enquanto até criarmos a tabela
         };
       });
 
@@ -114,9 +100,9 @@ const Hub = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
       if (!user) return;
 
@@ -126,26 +112,23 @@ const Hub = () => {
         .eq('user_id', user.id)
         .single();
 
-      const { data: currentSession } = await supabase
-        .from('user_sessions')
-        .select('expires_at')
-        .eq('user_id', user.id)
-        .eq('frontend_module', 'rbac')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
+      // Simular expiração de sessão (já que a tabela user_sessions não existe)
       setUserStats({
         totalModules: modules.filter(m => m.hasAccess).length,
         lastLogin: profile?.ultimo_login || new Date().toISOString(),
-        sessionExpires: currentSession?.expires_at || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+        sessionExpires: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 horas
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  };
+  }, [user, modules]);
 
-          const checkModuleAccess = (moduleName: string): boolean => {
+  useEffect(() => {
+    fetchUserModules();
+    fetchUserStats();
+  }, [fetchUserModules, fetchUserStats]);
+
+  const checkModuleAccess = (moduleName: string): boolean => {
             // Módulos disponíveis (já implementados)
             const availableModules = [
               'gestao-usuarios',
@@ -219,20 +202,20 @@ const Hub = () => {
       const targetRoute = moduleRoutes[module.name];
       
       if (targetRoute) {
-        // Log do acesso
-        await supabase
-          .from('resource_access_log')
-          .insert({
-            user_id: user?.id,
-            resource_type: 'module_access',
-            resource_path: `/hub/${module.name}`,
-            action: 'access',
-            success: true,
-            metadata: {
-              module_name: module.name,
-              target_route: targetRoute
-            }
-          });
+        // Log do acesso (comentado até criarmos a tabela resource_access_log)
+        // await supabase
+        //   .from('resource_access_log')
+        //   .insert({
+        //     user_id: user?.id,
+        //     resource_type: 'module_access',
+        //     resource_path: `/hub/${module.name}`,
+        //     action: 'access',
+        //     success: true,
+        //     metadata: {
+        //       module_name: module.name,
+        //       target_route: targetRoute
+        //     }
+        //   });
 
                 toast({
                   title: "Redirecionando",
@@ -366,8 +349,7 @@ const Hub = () => {
                                       style={{ backgroundColor: designTokens.colors.primary[50] }}
                                     >
                                       <IconComponent 
-                                        className="h-6 w-6" 
-                                        style={{ color: designTokens.colors.primary.DEFAULT }} 
+                                        className="h-6 w-6 text-blue-600" 
                                       />
                                     </div>
                                   </div>
@@ -487,8 +469,7 @@ const Hub = () => {
                       style={{ backgroundColor: designTokens.colors.primary[50] }}
                     >
                       <IconComponent 
-                        className="h-6 w-6" 
-                        style={{ color: designTokens.colors.primary.DEFAULT }} 
+                        className="h-6 w-6 text-blue-600" 
                       />
                     </div>
                   </div>
