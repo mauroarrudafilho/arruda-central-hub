@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EditableField } from '@/components/ui/EditableField';
 import { MockDataIcon } from '@/components/ui/MockDataIcon';
 import { useUserDetails } from '@/hooks/useUserDetails';
-import { useAllProjects } from '@/hooks/useAllProjects';
+import { useAllModules } from '@/hooks/useAllModules';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useUserActivity } from '@/hooks/useUserActivity';
@@ -52,7 +52,7 @@ const UserDetail = () => {
 
   // Hooks para dados do usuário
   const { userDetails, userProjectAccess, loading: userLoading, updateProjectAccess } = useUserDetails(id);
-  const { projects, loading: projectsLoading } = useAllProjects();
+  const { modules, loading: modulesLoading } = useAllModules();
   const { 
     userRoles: roles, 
     availableRoles, 
@@ -95,7 +95,7 @@ const UserDetail = () => {
     );
   }
 
-  if (userLoading || projectsLoading || rolesLoading || permissionsLoading || activityLoading) {
+  if (userLoading || modulesLoading || rolesLoading || permissionsLoading || activityLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -213,7 +213,7 @@ const UserDetail = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="roles">Roles</TabsTrigger>
           <TabsTrigger value="permissions">Permissões</TabsTrigger>
-          <TabsTrigger value="projects">Projetos</TabsTrigger>
+          <TabsTrigger value="projects">Módulos</TabsTrigger>
           <TabsTrigger value="activities">Atividades</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
@@ -238,7 +238,7 @@ const UserDetail = () => {
               onSave={async (newEmail) => {
                 try {
                   const { error } = await supabase
-                    .from('auth_profile')
+                    .from('rbac_auth_profile')
                     .update({ email: newEmail })
                     .eq('user_id', id);
                   
@@ -267,7 +267,7 @@ const UserDetail = () => {
               onSave={async (newName) => {
                 try {
                   const { error } = await supabase
-                    .from('auth_profile')
+                    .from('rbac_auth_profile')
                     .update({ nome: newName })
                     .eq('user_id', id);
                   
@@ -476,32 +476,32 @@ const UserDetail = () => {
                     </div>
         </TabsContent>
 
-        {/* Projects Tab */}
+        {/* Modules Tab */}
         <TabsContent value="projects" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">Acesso a Projetos</h2>
+              <h2 className="text-2xl font-bold">Acesso a Módulos</h2>
               <p className="text-muted-foreground">
-                Gerencie o acesso deste usuário aos projetos
+                Gerencie o acesso deste usuário aos módulos
               </p>
                     </div>
             <Button onClick={() => setShowProjectForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Adicionar Projeto
+              Adicionar Módulo
             </Button>
                   </div>
                   
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map(project => {
-              const access = userProjectAccess.find(upa => upa.project_id === project.id);
+            {modules.map(module => {
+              const access = userProjectAccess.find(upa => upa.project_id === module.id);
               return (
-                <Card key={project.id}>
+                <Card key={module.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
-                      {project.name}
+                      {module.nome}
                     </CardTitle>
-                    <CardDescription>{project.description}</CardDescription>
+                    <CardDescription>{module.descricao}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -510,14 +510,14 @@ const UserDetail = () => {
                         <Switch
                           checked={!!access}
                           onCheckedChange={async (checked) => {
-                            setUpdatingAccess(project.id);
+                            setUpdatingAccess(module.id);
                             try {
-                              await updateProjectAccess(project.id, checked);
+                              await updateProjectAccess(module.id, checked);
                             } finally {
                               setUpdatingAccess(null);
                             }
                           }}
-                          disabled={updatingAccess === project.id}
+                          disabled={updatingAccess === module.id}
                         />
                       </div>
                       {access && (
@@ -527,9 +527,9 @@ const UserDetail = () => {
                       <Select
                         value={access.access_level}
                               onValueChange={async (level) => {
-                                setUpdatingAccess(project.id);
+                                setUpdatingAccess(module.id);
                                 try {
-                                  await updateProjectAccess(project.id, true, level);
+                                  await updateProjectAccess(module.id, true, level);
                                 } finally {
                                   setUpdatingAccess(null);
                                 }
@@ -748,12 +748,12 @@ const UserDetail = () => {
         onClose={() => setShowProjectForm(false)}
         onSubmit={handleProjectSubmit}
         type="project"
-        title="Adicionar Projeto"
-        description="Selecione um projeto para dar acesso ao usuário"
-        availableOptions={projects.map(project => ({
-          id: project.id,
-          name: project.name,
-          description: project.description
+        title="Adicionar Módulo"
+        description="Selecione um módulo para dar acesso ao usuário"
+        availableOptions={modules.map(module => ({
+          id: module.id,
+          name: module.nome,
+          description: module.descricao
         }))}
       />
     </div>

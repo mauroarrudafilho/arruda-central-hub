@@ -8,7 +8,6 @@ export interface Permission {
   descricao: string | null;
   modulo: string;
   acao: string;
-  recurso: string;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -35,16 +34,14 @@ export interface RolePermission {
 }
 
 export interface PermissionMatrix {
-  [module: string]: {
-    [action: string]: {
-      [resource: string]: {
+    [module: string]: {
+      [action: string]: {
         hasPermission: boolean;
         source: 'role' | 'direct' | 'both';
         roles: string[];
         directGrant: boolean;
       };
     };
-  };
 }
 
 export interface PermissionOverride {
@@ -67,16 +64,15 @@ export const useUserPermissions = (userId: string) => {
   const fetchUserDirectPermissions = async () => {
     try {
       const { data, error } = await supabase
-        .from('auth_user_permission')
+        .from('rbac_auth_user_permission')
         .select(`
           *,
-          auth_permission (
+          rbac_auth_permission (
             id,
             nome,
             descricao,
             modulo,
             acao,
-            recurso,
             ativo,
             created_at,
             updated_at
@@ -95,7 +91,7 @@ export const useUserPermissions = (userId: string) => {
         data_concessao: item.data_concessao,
         data_expiracao: item.data_expiracao,
         granted_by: item.granted_by,
-        permission: item.auth_permission
+        permission: item.rbac_auth_permission
       })) || [];
 
       setUserPermissions(formattedPermissions);
@@ -114,23 +110,22 @@ export const useUserPermissions = (userId: string) => {
   const fetchUserRolePermissions = async () => {
     try {
       const { data, error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .select(`
           role_id,
           ativo,
-          auth_role_permission (
+          rbac_auth_role_permission (
             id,
             role_id,
             permission_id,
             ativo,
             created_at,
-            auth_permission (
+            rbac_auth_permission (
               id,
               nome,
               descricao,
               modulo,
               acao,
-              recurso,
               ativo,
               created_at,
               updated_at
@@ -146,15 +141,15 @@ export const useUserPermissions = (userId: string) => {
       
       data?.forEach(userRole => {
         if (userRole.ativo) {
-          userRole.auth_role_permission?.forEach(rolePerm => {
-            if (rolePerm.ativo) {
+          userRole.rbac_auth_role_permission?.forEach(rolePerm => {
+            if (rolePerm.concedida) {
               formattedRolePermissions.push({
                 id: rolePerm.id,
                 role_id: rolePerm.role_id,
                 permission_id: rolePerm.permission_id,
-                ativo: rolePerm.ativo,
+                ativo: rolePerm.concedida,
                 created_at: rolePerm.created_at,
-                permission: rolePerm.auth_permission
+                permission: rolePerm.rbac_auth_permission
               });
             }
           });
@@ -177,10 +172,9 @@ export const useUserPermissions = (userId: string) => {
   const fetchAllPermissions = async () => {
     try {
       const { data, error } = await supabase
-        .from('auth_permission')
+        .from('rbac_auth_permission')
         .select('*')
-        .eq('ativo', true)
-        .order('modulo, acao, recurso');
+        .order('modulo, acao');
 
       if (error) throw error;
       setAllPermissions(data || []);
@@ -201,12 +195,11 @@ export const useUserPermissions = (userId: string) => {
 
     // Processar permissões via roles
     rolePermissions.forEach(rolePerm => {
-      const { modulo, acao, recurso } = rolePerm.permission;
+      const { modulo, acao } = rolePerm.permission;
       
       if (!matrix[modulo]) matrix[modulo] = {};
-      if (!matrix[modulo][acao]) matrix[modulo][acao] = {};
-      if (!matrix[modulo][acao][recurso]) {
-        matrix[modulo][acao][recurso] = {
+      if (!matrix[modulo][acao]) {
+        matrix[modulo][acao] = {
           hasPermission: false,
           source: 'role',
           roles: [],
@@ -214,19 +207,18 @@ export const useUserPermissions = (userId: string) => {
         };
       }
 
-      matrix[modulo][acao][recurso].hasPermission = true;
-      matrix[modulo][acao][recurso].source = 'role';
-      matrix[modulo][acao][recurso].roles.push(rolePerm.role_id);
+      matrix[modulo][acao].hasPermission = true;
+      matrix[modulo][acao].source = 'role';
+      matrix[modulo][acao].roles.push(rolePerm.role_id);
     });
 
     // Processar permissões diretas
     userPermissions.forEach(userPerm => {
-      const { modulo, acao, recurso } = userPerm.permission;
+      const { modulo, acao } = userPerm.permission;
       
       if (!matrix[modulo]) matrix[modulo] = {};
-      if (!matrix[modulo][acao]) matrix[modulo][acao] = {};
-      if (!matrix[modulo][acao][recurso]) {
-        matrix[modulo][acao][recurso] = {
+      if (!matrix[modulo][acao]) {
+        matrix[modulo][acao] = {
           hasPermission: false,
           source: 'direct',
           roles: [],
@@ -234,13 +226,13 @@ export const useUserPermissions = (userId: string) => {
         };
       }
 
-      matrix[modulo][acao][recurso].hasPermission = true;
-      matrix[modulo][acao][recurso].directGrant = true;
+      matrix[modulo][acao].hasPermission = true;
+      matrix[modulo][acao].directGrant = true;
       
-      if (matrix[modulo][acao][recurso].source === 'role') {
-        matrix[modulo][acao][recurso].source = 'both';
+      if (matrix[modulo][acao].source === 'role') {
+        matrix[modulo][acao].source = 'both';
       } else {
-        matrix[modulo][acao][recurso].source = 'direct';
+        matrix[modulo][acao].source = 'direct';
       }
     });
 
@@ -254,7 +246,7 @@ export const useUserPermissions = (userId: string) => {
       setError(null);
 
       const { data, error } = await supabase
-        .from('auth_user_permission')
+        .from('rbac_auth_user_permission')
         .insert([{
           user_id: permissionOverride.user_id,
           permission_id: permissionOverride.permission_id,
@@ -297,7 +289,7 @@ export const useUserPermissions = (userId: string) => {
       setError(null);
 
       const { error } = await supabase
-        .from('auth_user_permission')
+        .from('rbac_auth_user_permission')
         .delete()
         .eq('id', userPermissionId);
 
@@ -332,7 +324,7 @@ export const useUserPermissions = (userId: string) => {
       setError(null);
 
       const { error } = await supabase
-        .from('auth_user_permission')
+        .from('rbac_auth_user_permission')
         .update({ ativo })
         .eq('id', userPermissionId);
 
@@ -361,8 +353,8 @@ export const useUserPermissions = (userId: string) => {
   };
 
   // Verificar se usuário tem permissão específica
-  const hasPermission = (modulo: string, acao: string, recurso: string): boolean => {
-    return permissionMatrix[modulo]?.[acao]?.[recurso]?.hasPermission || false;
+  const hasPermission = (modulo: string, acao: string): boolean => {
+    return permissionMatrix[modulo]?.[acao]?.hasPermission || false;
   };
 
   // Verificar se usuário tem permissão em módulo
@@ -372,7 +364,7 @@ export const useUserPermissions = (userId: string) => {
 
   // Verificar se usuário tem permissão para ação específica
   const hasActionPermission = (modulo: string, acao: string): boolean => {
-    return Object.keys(permissionMatrix[modulo]?.[acao] || {}).length > 0;
+    return permissionMatrix[modulo]?.[acao]?.hasPermission || false;
   };
 
   // Buscar permissões por módulo
@@ -409,26 +401,20 @@ export const useUserPermissions = (userId: string) => {
   const getConflictingPermissions = (): { permission: Permission; sources: string[] }[] => {
     const conflicts: { permission: Permission; sources: string[] }[] = [];
     
-    Object.values(permissionMatrix).forEach(module => {
-      Object.values(module).forEach(action => {
-        Object.values(action).forEach(resource => {
-          if (resource.source === 'both') {
-            const permission = allPermissions.find(p => 
-              p.modulo === Object.keys(permissionMatrix).find(m => 
-                permissionMatrix[m] === module
-              ) &&
-              p.acao === Object.keys(module).find(a => module[a] === action) &&
-              p.recurso === Object.keys(action).find(r => action[r] === resource)
-            );
-            
-            if (permission) {
-              conflicts.push({
-                permission,
-                sources: ['role', 'direct']
-              });
-            }
+    Object.entries(permissionMatrix).forEach(([modulo, actions]) => {
+      Object.entries(actions).forEach(([acao, permission]) => {
+        if (permission.source === 'both') {
+          const foundPermission = allPermissions.find(p => 
+            p.modulo === modulo && p.acao === acao
+          );
+          
+          if (foundPermission) {
+            conflicts.push({
+              permission: foundPermission,
+              sources: ['role', 'direct']
+            });
           }
-        });
+        }
       });
     });
 
