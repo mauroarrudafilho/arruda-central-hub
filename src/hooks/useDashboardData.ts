@@ -49,7 +49,7 @@ export const useDashboardData = () => {
         // Usar RPC para contagem de usuários (bypassa RLS)
         supabase.rpc('get_total_users_count'),
         // Roles podem ser vistos por todos
-        supabase.from('auth_role').select('id', { count: 'exact' }).eq('ativo', true),
+        supabase.from('rbac_auth_role').select('id', { count: 'exact' }).eq('ativo', true),
         // Usar RPC para contagem de sessões
         supabase.rpc('get_active_sessions_count'),
         // Módulos podem ser vistos por usuários autenticados, mas vamos usar RPC

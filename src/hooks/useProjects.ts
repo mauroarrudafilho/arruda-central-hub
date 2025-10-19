@@ -12,13 +12,15 @@ export interface Project {
 
 export interface ProjectModule {
   id: string;
-  project_id: string;
+  project_id?: string;
   nome: string;
   slug: string;
   icone: string | null;
   rota: string;
   ordem: number;
   ativo: boolean;
+  descricao?: string | null;
+  status?: string;
 }
 
 export const useProjects = () => {
@@ -68,11 +70,7 @@ export const useProjectModules = (projectId: string | null) => {
       setError(null);
 
       const { data, error } = await supabase
-        .from('project_modules')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('ativo', true)
-        .order('ordem');
+        .rpc('get_project_modules_with_details', { project_id_param: projectId });
       
       if (error) throw error;
       

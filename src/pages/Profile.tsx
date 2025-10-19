@@ -53,7 +53,7 @@ const Profile = () => {
       
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
-        .from('auth_profile')
+        .from('rbac_auth_profile')
         .select('*')
         .eq('user_id', user.id)
         .single();
@@ -62,16 +62,16 @@ const Profile = () => {
 
       // Fetch user roles
       const { data: userRoles } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .select(`
-          auth_role:role_id (
+          rbac_auth_role:role_id (
             nome
           )
         `)
         .eq('user_id', user.id)
         .eq('ativo', true);
 
-      const roles = userRoles?.map(ur => ur.auth_role?.nome).filter(Boolean) || [];
+      const roles = userRoles?.map(ur => ur.rbac_auth_role?.nome).filter(Boolean) || [];
 
       const fullProfile = {
         ...profileData,
@@ -105,7 +105,7 @@ const Profile = () => {
       setSaving(true);
       
       const { error } = await supabase
-        .from('auth_profile')
+        .from('rbac_auth_profile')
         .update({
           nome: formData.nome,
           telefone: formData.telefone,

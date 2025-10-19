@@ -44,10 +44,10 @@ export const useUserRoles = (userId: string) => {
       setError(null);
 
       const { data, error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .select(`
           *,
-          auth_role (
+          rbac_auth_role (
             id,
             nome,
             descricao,
@@ -64,9 +64,9 @@ export const useUserRoles = (userId: string) => {
 
       const formattedRoles: UserRole[] = data?.map(item => ({
         id: item.id,
-        nome: item.auth_role.nome,
-        descricao: item.auth_role.descricao,
-        cor: item.auth_role.cor,
+        nome: item.rbac_auth_role.nome,
+        descricao: item.rbac_auth_role.descricao,
+        cor: item.rbac_auth_role.cor,
         ativo: item.ativo,
         data_concessao: item.data_concessao,
         data_expiracao: item.data_expiracao,
@@ -92,7 +92,7 @@ export const useUserRoles = (userId: string) => {
   const fetchAvailableRoles = async () => {
     try {
       const { data, error } = await supabase
-        .from('auth_role')
+        .from('rbac_auth_role')
         .select('*')
         .eq('ativo', true)
         .order('nome');
@@ -117,7 +117,7 @@ export const useUserRoles = (userId: string) => {
       setError(null);
 
       const { data, error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .insert([{
           user_id: roleAssignment.user_id,
           role_id: roleAssignment.role_id,
@@ -158,7 +158,7 @@ export const useUserRoles = (userId: string) => {
       setError(null);
 
       const { error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .delete()
         .eq('id', userRoleId);
 
@@ -192,7 +192,7 @@ export const useUserRoles = (userId: string) => {
       setError(null);
 
       const { error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .update({ ativo })
         .eq('id', userRoleId);
 
@@ -226,7 +226,7 @@ export const useUserRoles = (userId: string) => {
       setError(null);
 
       const { error } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .update({ data_expiracao: dataExpiracao })
         .eq('id', userRoleId);
 

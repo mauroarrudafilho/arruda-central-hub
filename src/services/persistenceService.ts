@@ -107,7 +107,7 @@ export const updateUserPreferences = async (
   try {
     // Buscar preferências existentes
     const { data: existingPrefs } = await supabase
-      .from('auth_profile')
+      .from('rbac_auth_profile')
       .select('*')
       .eq('user_id', userId)
       .single();
@@ -115,7 +115,7 @@ export const updateUserPreferences = async (
     if (existingPrefs) {
       // Atualizar preferências existentes
       await supabase
-        .from('auth_profile')
+        .from('rbac_auth_profile')
         .update({
           updated_at: new Date().toISOString(),
           // Aqui você pode adicionar campos específicos para preferências
@@ -125,7 +125,7 @@ export const updateUserPreferences = async (
     } else {
       // Criar novo perfil com preferências
       await supabase
-        .from('auth_profile')
+        .from('rbac_auth_profile')
         .insert([{
           user_id: userId,
           nome: 'Usuário',
@@ -157,7 +157,7 @@ export const getUserPreferences = async (userId: string): Promise<UserPreference
 
     // Buscar do banco de dados
     await supabase
-      .from('auth_profile')
+      .from('rbac_auth_profile')
       .select('*')
       .eq('user_id', userId)
       .single();

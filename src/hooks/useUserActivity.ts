@@ -94,7 +94,7 @@ export const useUserActivity = (userId: string) => {
       setError(null);
 
       const { data, error } = await supabase
-        .from('auth_audit')
+        .from('rbac_auth_audit')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -135,7 +135,7 @@ export const useUserActivity = (userId: string) => {
   const fetchResourceAccessLogs = async (limit: number = 50) => {
     try {
       const { data, error } = await supabase
-        .from('auth_audit')
+        .from('rbac_auth_audit')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -173,7 +173,7 @@ export const useUserActivity = (userId: string) => {
   const fetchSecurityLogs = async (limit: number = 50) => {
     try {
       const { data, error } = await supabase
-        .from('auth_audit')
+        .from('rbac_auth_audit')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -214,7 +214,7 @@ export const useUserActivity = (userId: string) => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from('auth_audit')
+        .from('rbac_auth_audit')
         .select('*')
         .eq('user_id', userId)
         .gte('created_at', thirtyDaysAgo.toISOString());
@@ -254,7 +254,7 @@ export const useUserActivity = (userId: string) => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from('auth_audit')
+        .from('rbac_auth_audit')
         .select('*')
         .eq('user_id', userId)
         .gte('created_at', thirtyDaysAgo.toISOString());

@@ -63,12 +63,12 @@ export const useUserDetails = (userId: string | undefined) => {
 
       // Buscar roles do usuário
       const { data: rolesData, error: rolesError } = await supabase
-        .from('auth_user_role')
+        .from('rbac_auth_user_role')
         .select(`
           ativo,
           data_concessao,
           data_expiracao,
-          auth_role:role_id (
+          rbac_auth_role:role_id (
             id,
             nome,
             descricao,
@@ -93,7 +93,7 @@ export const useUserDetails = (userId: string | undefined) => {
 
       // Buscar acessos a projetos
       const { data: accessData, error: accessError } = await supabase
-        .from('user_project_access')
+        .from('rbac_user_project_access')
         .select(`
           nivel_acesso,
           created_at,

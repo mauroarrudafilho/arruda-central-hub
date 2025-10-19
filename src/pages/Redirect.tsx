@@ -70,7 +70,7 @@ const Redirect = () => {
 
       // Buscar ID do projeto dinamicamente
       const { data: projectData } = await supabase
-        .from('projects')
+        .from('rbac_projects')
         .select('id')
         .eq('slug', 'gestao')
         .single();

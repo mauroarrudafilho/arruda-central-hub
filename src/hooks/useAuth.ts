@@ -51,13 +51,13 @@ export const useAuthState = () => {
                 console.error('Error checking admin status:', error);
                 // Fallback: check directly in the database
                 const { data: roleData } = await supabase
-                  .from('auth_user_role')
-                  .select('role_id, auth_role!inner(nome)')
+                  .from('rbac_auth_user_role')
+                  .select('role_id, rbac_auth_role!inner(nome)')
                   .eq('user_id', session.user.id)
                   .eq('ativo', true)
                   .single();
                 
-                if (roleData?.auth_role?.nome === 'admin') {
+                if (roleData?.rbac_auth_role?.nome === 'admin') {
                   setIsAdmin(true);
                 } else {
                   setIsAdmin(false);

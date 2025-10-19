@@ -37,7 +37,7 @@ const Users = () => {
       
       // Fetch users with their roles
       const { data: profiles, error: profilesError } = await supabase
-        .from('auth_profile')
+        .from('rbac_auth_profile')
         .select(`
           id,
           user_id,
@@ -55,16 +55,16 @@ const Users = () => {
       
       for (const profile of profiles || []) {
         const { data: userRoles } = await supabase
-          .from('auth_user_role')
+          .from('rbac_auth_user_role')
           .select(`
-            auth_role:role_id (
+            rbac_auth_role:role_id (
               nome
             )
           `)
           .eq('user_id', profile.user_id)
           .eq('ativo', true);
 
-        const roles = userRoles?.map(ur => ur.auth_role?.nome).filter(Boolean) || [];
+        const roles = userRoles?.map(ur => ur.rbac_auth_role?.nome).filter(Boolean) || [];
 
         usersWithRoles.push({
           id: profile.user_id,

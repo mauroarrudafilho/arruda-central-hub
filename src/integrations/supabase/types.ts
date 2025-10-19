@@ -419,7 +419,7 @@ export type Database = {
         }
         Relationships: []
       }
-      auth_profile: {
+      rbac_auth_profile: {
         Row: {
           api_tokens: Json | null
           avatar_url: string | null
@@ -430,6 +430,7 @@ export type Database = {
           email: string
           id: string
           nome: string
+          organizacao_id: string | null
           status: string
           telefone: string | null
           time_id: string | null
@@ -448,6 +449,7 @@ export type Database = {
           email: string
           id?: string
           nome: string
+          organizacao_id?: string | null
           status?: string
           telefone?: string | null
           time_id?: string | null
@@ -466,6 +468,7 @@ export type Database = {
           email?: string
           id?: string
           nome?: string
+          organizacao_id?: string | null
           status?: string
           telefone?: string | null
           time_id?: string | null
@@ -474,9 +477,17 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "auth_profile_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      auth_role: {
+      rbac_auth_role: {
         Row: {
           ativo: boolean
           cor: string | null
@@ -485,6 +496,7 @@ export type Database = {
           distribuidor: string | null
           id: string
           nome: string
+          organizacao_id: string | null
           sistema: boolean
           updated_at: string
         }
@@ -496,6 +508,7 @@ export type Database = {
           distribuidor?: string | null
           id?: string
           nome: string
+          organizacao_id?: string | null
           sistema?: boolean
           updated_at?: string
         }
@@ -507,10 +520,394 @@ export type Database = {
           distribuidor?: string | null
           id?: string
           nome?: string
+          organizacao_id?: string | null
           sistema?: boolean
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "auth_role_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_organizations: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          slug?: string
+          updated_at?: string
+        }
         Relationships: []
+      }
+      rbac_modules: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          configuracoes: Json | null
+          created_at: string
+          data_atualizacao: string | null
+          data_lancamento: string | null
+          descricao: string | null
+          desenvolvedor: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number
+          organizacao_id: string | null
+          rota: string | null
+          slug: string
+          status: string
+          updated_at: string
+          url_externa: string | null
+          versao: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          configuracoes?: Json | null
+          created_at?: string
+          data_atualizacao?: string | null
+          data_lancamento?: string | null
+          descricao?: string | null
+          desenvolvedor?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          organizacao_id?: string | null
+          rota?: string | null
+          slug: string
+          status?: string
+          updated_at?: string
+          url_externa?: string | null
+          versao?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          configuracoes?: Json | null
+          created_at?: string
+          data_atualizacao?: string | null
+          data_lancamento?: string | null
+          descricao?: string | null
+          desenvolvedor?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          organizacao_id?: string | null
+          rota?: string | null
+          slug?: string
+          status?: string
+          updated_at?: string
+          url_externa?: string | null
+          versao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modules_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_user_module_access: {
+        Row: {
+          ativo: boolean
+          concedido_por: string | null
+          created_at: string
+          data_concessao: string
+          data_expiracao: string | null
+          id: string
+          module_id: string
+          nivel_acesso: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          concedido_por?: string | null
+          created_at?: string
+          data_concessao?: string
+          data_expiracao?: string | null
+          id?: string
+          module_id: string
+          nivel_acesso?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          concedido_por?: string | null
+          created_at?: string
+          data_concessao?: string
+          data_expiracao?: string | null
+          id?: string
+          module_id?: string
+          nivel_acesso?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_module_access_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_module_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_rls_policies: {
+        Row: {
+          ativo: boolean
+          condicao_using: string | null
+          condicao_with_check: string | null
+          configuracoes: Json | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          modulo_id: string | null
+          nome: string
+          operacao: string
+          organizacao_id: string | null
+          prioridade: number
+          projeto_id: string | null
+          role_id: string | null
+          tabela: string
+          tags: string[] | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          condicao_using?: string | null
+          condicao_with_check?: string | null
+          configuracoes?: Json | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          modulo_id?: string | null
+          nome: string
+          operacao: string
+          organizacao_id?: string | null
+          prioridade?: number
+          projeto_id?: string | null
+          role_id?: string | null
+          tabela: string
+          tags?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          condicao_using?: string | null
+          condicao_with_check?: string | null
+          configuracoes?: Json | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          modulo_id?: string | null
+          nome?: string
+          operacao?: string
+          organizacao_id?: string | null
+          prioridade?: number
+          projeto_id?: string | null
+          role_id?: string | null
+          tabela?: string
+          tags?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rbac_rls_policies_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rbac_rls_policies_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rbac_rls_policies_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rbac_rls_policies_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_auth_role"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_rls_policy_history: {
+        Row: {
+          acao: string
+          created_at: string
+          created_by: string | null
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          id: string
+          motivo: string | null
+          policy_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          created_by?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          motivo?: string | null
+          policy_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          created_by?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          motivo?: string | null
+          policy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rbac_rls_policy_history_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_rls_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_rls_policy_applications: {
+        Row: {
+          aplicado_em: string | null
+          aplicado_por: string | null
+          created_at: string
+          erro: string | null
+          id: string
+          policy_id: string
+          status: string
+          tabela: string
+        }
+        Insert: {
+          aplicado_em?: string | null
+          aplicado_por?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          policy_id: string
+          status?: string
+          tabela: string
+        }
+        Update: {
+          aplicado_em?: string | null
+          aplicado_por?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          policy_id?: string
+          status?: string
+          tabela?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rbac_rls_policy_applications_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_rls_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rbac_module_stats: {
+        Row: {
+          acessos: number
+          created_at: string
+          data: string
+          erros: number
+          id: string
+          module_id: string
+          tempo_medio_sessao: number | null
+          usuarios_unicos: number
+        }
+        Insert: {
+          acessos?: number
+          created_at?: string
+          data: string
+          erros?: number
+          id?: string
+          module_id: string
+          tempo_medio_sessao?: number | null
+          usuarios_unicos?: number
+        }
+        Update: {
+          acessos?: number
+          created_at?: string
+          data?: string
+          erros?: number
+          id?: string
+          module_id?: string
+          tempo_medio_sessao?: number | null
+          usuarios_unicos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_stats_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "rbac_modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       auth_role_permission: {
         Row: {
@@ -2479,7 +2876,7 @@ export type Database = {
         }
         Relationships: []
       }
-      project_modules: {
+      rbac_modules_pages: {
         Row: {
           ativo: boolean
           created_at: string
@@ -2518,10 +2915,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "project_modules_project_id_fkey"
+            foreignKeyName: "modules_pages_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "rbac_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -3031,7 +3428,7 @@ export type Database = {
             foreignKeyName: "user_project_access_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "rbac_projects"
             referencedColumns: ["id"]
           },
         ]

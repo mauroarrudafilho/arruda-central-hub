@@ -129,7 +129,7 @@ export const fetchModuleStats = async (): Promise<ModuleStats> => {
  */
 export const fetchProjects = async (): Promise<Project[]> => {
   const { data, error } = await supabase
-    .from('projects')
+    .from('rbac_projects')
     .select('*')
     .eq('status', 'ativo')
     .order('created_at', { ascending: false });
@@ -147,7 +147,7 @@ export const fetchProjects = async (): Promise<Project[]> => {
  */
 export const fetchProjectById = async (id: string): Promise<Project | null> => {
   const { data, error } = await supabase
-    .from('projects')
+    .from('rbac_projects')
     .select('*')
     .eq('id', id)
     .single();

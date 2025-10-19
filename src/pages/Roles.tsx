@@ -45,7 +45,7 @@ const Roles = () => {
       
       // Fetch roles
       const { data: rolesData, error: rolesError } = await supabase
-        .from('auth_role')
+        .from('rbac_auth_role')
         .select('*')
         .order('nome');
 
@@ -53,7 +53,7 @@ const Roles = () => {
 
       // Fetch permissions
       const { data: permissionsData, error: permissionsError } = await supabase
-        .from('auth_permission')
+        .from('rbac_auth_permission')
         .select('*')
         .order('modulo, nome');
 
@@ -61,12 +61,12 @@ const Roles = () => {
 
       // Fetch role-permission relationships
       const { data: rolePermissions, error: rpError } = await supabase
-        .from('auth_role_permission')
+        .from('rbac_auth_role_permission')
         .select(`
           role_id,
           permission_id,
           concedida,
-          auth_permission:permission_id (
+          rbac_auth_permission:permission_id (
             id,
             nome,
             modulo,
@@ -83,7 +83,7 @@ const Roles = () => {
         permissions: rolePermissions
           ?.filter(rp => rp.role_id === role.id)
           ?.map(rp => ({
-            ...rp.auth_permission,
+            ...rp.rbac_auth_permission,
             granted: rp.concedida
           })) || []
       })) || [];
@@ -104,7 +104,7 @@ const Roles = () => {
 
   const logAuditEvent = async (action: string, metadata?: any) => {
     try {
-      await supabase.from('auth_audit').insert({
+      await supabase.from('rbac_auth_audit').insert({
         user_id: (await supabase.auth.getUser()).data.user?.id,
         acao: action,
         modulo: 'rbac',
