@@ -657,7 +657,7 @@ const Hub = () => {
               isQuickAccessOpen ? 'lg:w-80' : 'lg:w-16'
             )}
           >
-            <div className="lg:sticky lg:top-16 lg:h-full">
+            <div className="lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]">
               <div
                 className={cn(
                   'flex h-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-[padding] duration-200',
