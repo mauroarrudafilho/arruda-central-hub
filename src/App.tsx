@@ -80,6 +80,7 @@ const App = () => (
             <Route path="/users/new" element={<ProtectedRoute component={UserCreate} />} />
             <Route path="/users/:id" element={<ProtectedRoute component={UserDetail} />} />
             <Route path="/users/:id/edit" element={<ProtectedRoute component={UserDetail} />} />
+            <Route path="/gestao-usuarios" element={<Navigate to="/users" replace />} />
             
             {/* RBAC Hub */}
             <Route path="/rbac" element={<ProtectedRoute component={RBAC} requireAdmin />} />
