@@ -538,6 +538,79 @@ const Hub = () => {
               </div>
             </div>
 
+            <div className="lg:hidden">
+              <div className="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3
+                      className="text-xl font-semibold text-gray-900"
+                      style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                    >
+                      Atalhos rápidos
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Módulos favoritos em formato de acesso rápido.
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setIsQuickAccessOpen((prev) => !prev)}
+                    aria-pressed={isQuickAccessOpen}
+                    type="button"
+                  >
+                    <Menu
+                      className={cn(
+                        'h-4 w-4 transition-transform duration-200',
+                        !isQuickAccessOpen && 'rotate-180'
+                      )}
+                    />
+                    <span className="sr-only">Alternar atalhos rápidos</span>
+                  </Button>
+                </div>
+
+                {favorites.length > 0 ? (
+                  isQuickAccessOpen && (
+                    <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+                      {favorites.map((module) => (
+                        <button
+                          key={`favorite-mobile-${module.id}`}
+                          className={cn(
+                            'flex w-56 flex-shrink-0 items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm transition-colors duration-200',
+                            module.isAvailable
+                              ? 'hover:border-blue-300 hover:shadow-md'
+                              : 'cursor-not-allowed opacity-60'
+                          )}
+                          onClick={() => module.isAvailable && handleModuleAccess(module)}
+                          disabled={!module.isAvailable}
+                          aria-label={`Acessar módulo favorito ${module.nome}`}
+                          type="button"
+                        >
+                          <div
+                            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+                            style={{ backgroundColor: designTokens.colors.primary[50] }}
+                          >
+                            <module.Icon className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <span
+                            className="truncate text-sm font-medium text-gray-900"
+                            style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                          >
+                            {module.nome}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+                    Selecione módulos favoritos para tê-los aqui como acesso rápido.
+                  </div>
+                )}
+              </div>
+            </div>
+
             <section className="w-full">
               <h3
                 className="mb-6 text-2xl font-semibold text-gray-900"
@@ -653,7 +726,7 @@ const Hub = () => {
 
           <aside
             className={cn(
-              'order-2 w-full lg:order-1 lg:flex-none lg:transition-[width] lg:duration-200 lg:ease-in-out lg:self-stretch',
+              'order-2 w-full hidden lg:order-1 lg:block lg:flex-none lg:transition-[width] lg:duration-200 lg:ease-in-out lg:self-stretch',
               isQuickAccessOpen ? 'lg:w-80' : 'lg:w-16'
             )}
           >
@@ -752,40 +825,7 @@ const Hub = () => {
                       ))}
                     </div>
 
-                    {isQuickAccessOpen && (
-                      <div className="-mx-5 mt-4 lg:hidden">
-                        <div className="flex gap-4 overflow-x-auto px-5 pb-2">
-                          {favorites.map((module) => (
-                            <button
-                              key={`favorite-mobile-${module.id}`}
-                              className={cn(
-                                'flex w-60 flex-shrink-0 items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm transition-colors duration-200',
-                                module.isAvailable
-                                  ? 'hover:border-blue-300 hover:shadow-md'
-                                  : 'cursor-not-allowed opacity-60'
-                              )}
-                              onClick={() => module.isAvailable && handleModuleAccess(module)}
-                              disabled={!module.isAvailable}
-                              aria-label={`Acessar módulo favorito ${module.nome}`}
-                              type="button"
-                            >
-                              <div
-                                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                                style={{ backgroundColor: designTokens.colors.primary[50] }}
-                              >
-                                <module.Icon className="h-4 w-4 text-blue-600" />
-                              </div>
-                              <span
-                                className="truncate text-sm font-medium text-gray-900"
-                                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-                              >
-                                {module.nome}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    
                   </>
                 ) : (
                   <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
