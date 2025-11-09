@@ -476,7 +476,7 @@ const Hub = () => {
       <BackgroundGlow />
 
       <main className="relative z-10 w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-12">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-start w-full max-w-full">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch w-full max-w-full">
           <div className="order-1 flex-1 min-w-0 lg:order-2 w-full">
             <div className="mb-6">
               <h2
@@ -653,15 +653,15 @@ const Hub = () => {
 
           <aside
             className={cn(
-              'order-2 w-full lg:order-1 lg:flex-none lg:transition-[width] lg:duration-200 lg:ease-in-out',
-              isQuickAccessOpen ? 'lg:w-72' : 'lg:w-16'
+              'order-2 w-full lg:order-1 lg:flex-none lg:transition-[width] lg:duration-200 lg:ease-in-out lg:self-stretch',
+              isQuickAccessOpen ? 'lg:w-80' : 'lg:w-16'
             )}
           >
-            <div className="lg:sticky lg:top-16">
+            <div className="lg:sticky lg:top-16 lg:h-full">
               <div
                 className={cn(
-                  'rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-[padding] duration-200',
-                  !isQuickAccessOpen && 'lg:p-3'
+                  'flex h-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-[padding] duration-200',
+                  !isQuickAccessOpen && 'lg:p-3 lg:items-center'
                 )}
               >
                 <div
@@ -700,7 +700,12 @@ const Hub = () => {
 
                 {favorites.length > 0 ? (
                   <>
-                    <div className="mt-4 hidden flex-col gap-2 lg:flex">
+                    <div
+                      className={cn(
+                        'mt-4 hidden flex-col gap-2 lg:flex',
+                        !isQuickAccessOpen && 'items-center'
+                      )}
+                    >
                       {favorites.map((module) => (
                         <button
                           key={`favorite-sidebar-${module.id}`}
