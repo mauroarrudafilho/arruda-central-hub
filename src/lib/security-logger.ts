@@ -66,11 +66,14 @@ export class SecurityLogger {
    */
   public async log(data: SecurityLogData): Promise<void> {
     try {
+      const resolvedIp = data.ip_address ?? await this.getClientIP();
+      const sanitizedIp = this.sanitizeIp(resolvedIp);
+
       // Adicionar timestamp e dados do navegador se não fornecidos
       const logData = {
         ...data,
-        ip_address: data.ip_address || await this.getClientIP(),
-        user_agent: data.user_agent || navigator.userAgent,
+        ip_address: sanitizedIp ?? undefined,
+        user_agent: data.user_agent || (typeof navigator !== 'undefined' ? navigator.userAgent : undefined),
         created_at: new Date().toISOString(),
       };
 
@@ -213,7 +216,7 @@ export class SecurityLogger {
           resource_path: log.resource_path,
           action: log.action,
           success: log.success,
-          ip_address: log.ip_address,
+          ip_address: log.ip_address ?? null,
           user_agent: log.user_agent,
           metadata: log.metadata,
           error_message: log.error_message,
@@ -248,7 +251,7 @@ export class SecurityLogger {
           resource_path: logData.resource_path,
           action: logData.action,
           success: logData.success,
-          ip_address: logData.ip_address,
+          ip_address: logData.ip_address ?? null,
           user_agent: logData.user_agent,
           metadata: logData.metadata,
           error_message: logData.error_message,
@@ -266,15 +269,35 @@ export class SecurityLogger {
   /**
    * Obter IP do cliente (simulado)
    */
-  private async getClientIP(): Promise<string> {
+  private async getClientIP(): Promise<string | null> {
     try {
       // Em produção, você pode usar um serviço como ipify.org
       const response = await fetch('https://api.ipify.org?format=json');
       const data = await response.json();
-      return data.ip;
+      return typeof data?.ip === 'string' ? data.ip : null;
     } catch (error) {
-      return 'unknown';
+      return null;
     }
+  }
+
+  private sanitizeIp(ip?: string | null): string | null {
+    if (!ip) {
+      return null;
+    }
+
+    const trimmed = ip.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const ipv4Pattern = /^(25[0-5]|2[0-4]\d|[01]?\d\d?)(\.(25[0-5]|2[0-4]\d|[01]?\d\d?)){3}$/;
+    const ipv6Pattern = /^(([0-9a-fA-F]{1,4}):){2,7}[0-9a-fA-F]{1,4}$/;
+
+    if (ipv4Pattern.test(trimmed) || ipv6Pattern.test(trimmed)) {
+      return trimmed;
+    }
+
+    return null;
   }
 
   /**

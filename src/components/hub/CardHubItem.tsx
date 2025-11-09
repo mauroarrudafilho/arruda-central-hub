@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useDesignTokens } from '@/hooks/useDesignTokens';
 import { cn } from '@/lib/utils';
-import { ArrowRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ExternalLink, Star } from 'lucide-react';
 
 interface CardHubItemProps {
   title: string;
@@ -16,6 +16,10 @@ interface CardHubItemProps {
   badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
   className?: string;
   onClick?: () => void;
+  status?: string;
+  disabled?: boolean;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export const CardHubItem: React.FC<CardHubItemProps> = ({
@@ -28,11 +32,17 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
   badgeVariant = 'secondary',
   className,
   onClick,
+  status,
+  disabled = false,
+  isFavorite = false,
+  onToggleFavorite,
 }) => {
   const navigate = useNavigate();
   const designTokens = useDesignTokens();
 
   const handleClick = () => {
+    if (disabled) return;
+
     if (onClick) {
       onClick();
     } else if (external) {
@@ -46,6 +56,7 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
     <Card 
       className={cn(
         "cursor-pointer hover:shadow-md transition-all duration-200 hover:border-blue-300 group",
+        disabled && "pointer-events-none opacity-50 cursor-not-allowed",
         className
       )}
       style={{ 
@@ -53,6 +64,7 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
         fontFamily: designTokens.typography.fontFamily.sans.join(', ')
       }}
       onClick={handleClick}
+      aria-disabled={disabled}
     >
       <CardContent className="p-6">
         <div className="flex items-start space-x-4">
@@ -76,6 +88,27 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
                 {title}
               </h3>
               <div className="flex items-center space-x-2">
+                {onToggleFavorite && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!disabled) {
+                        onToggleFavorite();
+                      }
+                    }}
+                    className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-pressed={isFavorite}
+                    aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  >
+                    <Star
+                      className={cn(
+                        "h-4 w-4",
+                        isFavorite ? "fill-yellow-400 text-yellow-500" : "text-gray-400 group-hover:text-yellow-400"
+                      )}
+                    />
+                  </button>
+                )}
                 {badge && (
                   <Badge variant={badgeVariant} className="text-xs">
                     {badge}
@@ -94,6 +127,14 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
             >
               {description}
             </p>
+            {status && (
+              <p
+                className="mt-3 text-xs font-medium"
+                style={{ color: designTokens.colors.success.DEFAULT }}
+              >
+                {status}
+              </p>
+            )}
           </div>
         </div>
       </CardContent>

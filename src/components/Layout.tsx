@@ -110,14 +110,16 @@ function AppSidebar() {
                     );
                   }
                   
-                  return (
-                    modules.map((module) => {
+                  return modules
+                    .filter((module) => module.rota && !module.rota.startsWith('http'))
+                    .map((module) => {
                       const IconComponent = getIcon(module.icone);
+                      const targetRoute = module.rota || '/';
                       return (
                         <SidebarMenuItem key={module.id}>
                           <SidebarMenuButton asChild>
                             <NavLink 
-                              to={module.rota}
+                              to={targetRoute}
                               end
                               className={({ isActive }) => 
                                 isActive 
@@ -131,8 +133,7 @@ function AppSidebar() {
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );
-                    })
-                  );
+                    });
                 })()}
               </SidebarMenu>
             </SidebarGroupContent>

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, 
-  User, 
-  Shield, 
-  Building2, 
+  ArrowLeft,
+  User,
+  Shield,
+  Building2,
   Activity,
   Plus,
   AlertTriangle,
@@ -12,7 +12,11 @@ import {
   XCircle,
   Clock,
   MapPin,
-  Monitor
+  Monitor,
+  Power,
+  PowerOff,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +41,17 @@ import { ActivityTable } from '@/components/user/ActivityTable';
 import { UserManagementForm } from '@/components/user/UserManagementForm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const UserDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +66,13 @@ const UserDetail = () => {
   const { toast } = useToast();
 
   // Hooks para dados do usuário
-  const { userDetails, userProjectAccess, loading: userLoading, updateProjectAccess } = useUserDetails(id);
+  const {
+    userDetails,
+    userProjectAccess,
+    loading: userLoading,
+    updateProjectAccess,
+    refetch,
+  } = useUserDetails(id);
   const { modules, loading: modulesLoading } = useAllModules();
   const { 
     userRoles: roles, 
@@ -77,6 +98,9 @@ const UserDetail = () => {
   } = useUserActivity(id || '');
 
   const [updatingAccess, setUpdatingAccess] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   // Early return if no user ID is provided
   if (!id) {
@@ -94,6 +118,94 @@ const UserDetail = () => {
       </div>
     );
   }
+
+  const normalizedStatus = userDetails?.status?.toLowerCase?.() ?? '';
+  const isActive =
+    normalizedStatus === 'ativo' ||
+    normalizedStatus === 'active';
+
+  const handleToggleStatus = async () => {
+    if (!id || !userDetails) return;
+    const nextStatus = isActive ? 'inativo' : 'ativo';
+    setStatusUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('rbac_auth_profile')
+        .update({ status: nextStatus })
+        .eq('user_id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: `Usuário ${isActive ? 'inativado' : 'reativado'}`,
+        description: `Status atualizado para ${nextStatus}.`,
+      });
+
+      await refetch();
+    } catch (error: any) {
+      console.error('Erro ao atualizar status do usuário:', error);
+      toast({
+        title: 'Erro ao atualizar status',
+        description: error.message ?? 'Ocorreu um erro inesperado.',
+        variant: 'destructive',
+      });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!id) return;
+    setDeletingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<{
+        success?: boolean;
+        error?: string;
+        details?: string;
+      }>('delete-user', {
+        body: { userId: id },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.error) {
+        toast({
+          title: 'Não foi possível excluir',
+          description: data.details
+            ? `${data.error} (${data.details})`
+            : data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Usuário excluído',
+        description: 'O usuário e seus dados foram removidos.',
+      });
+
+      if (data?.warning) {
+        toast({
+          title: 'Atenção',
+          description: data.warning,
+        });
+      }
+
+      navigate('/users');
+    } catch (error: any) {
+      console.error('Erro ao excluir usuário:', error);
+      toast({
+        title: 'Erro ao excluir usuário',
+        description: error.message ?? 'Ocorreu um erro inesperado.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingUser(false);
+      setDeleteDialogOpen(false);
+    }
+  };
 
   if (userLoading || modulesLoading || rolesLoading || permissionsLoading || activityLoading) {
     return (
@@ -204,6 +316,58 @@ const UserDetail = () => {
           <Badge variant={getStatusVariant(userDetails.status) as any}>
             {userDetails.status}
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleStatus}
+            disabled={statusUpdating}
+            className="flex items-center gap-2"
+          >
+            {statusUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isActive ? (
+              <PowerOff className="h-4 w-4" />
+            ) : (
+              <Power className="h-4 w-4" />
+            )}
+            {isActive ? 'Inativar' : 'Reativar'}
+          </Button>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Essa ação é irreversível. O usuário será removido do sistema caso não possua vínculos ativos
+                  (papéis, acessos ou equipes). Deseja continuar?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deletingUser}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteUser}
+                  disabled={deletingUser}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deletingUser ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Confirmar exclusão
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
@@ -546,7 +710,7 @@ const UserDetail = () => {
                       </Select>
                           </div>
                           <div className="text-sm text-gray-600">
-                            Concedido em: {format(new Date(access.granted_at), 'dd/MM/yyyy', { locale: ptBR })}
+                            Concedido em: {access.created_at ? format(new Date(access.created_at), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
                           </div>
                         </div>
                       )}

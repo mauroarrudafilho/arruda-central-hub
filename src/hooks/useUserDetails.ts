@@ -91,31 +91,42 @@ export const useUserDetails = (userId: string | undefined) => {
 
       setUserRoles(roles);
 
-      // Buscar acessos a projetos
+      // Buscar acessos a MÓDULOS (queries separadas para evitar nested join)
+      // 1. Buscar os acessos do usuário
       const { data: accessData, error: accessError } = await supabase
-        .from('rbac_user_project_access')
-        .select(`
-          nivel_acesso,
-          created_at,
-          projects:project_id (
-            id,
-            nome,
-            slug
-          )
-        `)
-        .eq('user_id', userId);
+        .from('rbac_user_module_access')
+        .select('module_id, nivel_acesso, created_at, ativo')
+        .eq('user_id', userId)
+        .eq('ativo', true);
 
       if (accessError) throw accessError;
 
-      const projectAccess = accessData?.map(access => ({
-        project_id: access.projects?.id || '',
-        project_name: access.projects?.nome || '',
-        project_slug: access.projects?.slug || '',
-        access_level: access.nivel_acesso as AccessLevel,
-        created_at: access.created_at,
-      })) || [];
+      if (!accessData || accessData.length === 0) {
+        setUserProjectAccess([]);
+      } else {
+        // 2. Buscar os detalhes dos módulos
+        const moduleIds = accessData.map(a => a.module_id);
+        const { data: modulesData, error: modulesError } = await supabase
+          .from('rbac_modules')
+          .select('id, nome, slug')
+          .in('id', moduleIds);
 
-      setUserProjectAccess(projectAccess);
+        if (modulesError) throw modulesError;
+
+        // 3. Montar mapa de módulos
+        const modulesMap = new Map(modulesData?.map(m => [m.id, m]) || []);
+
+        // 4. Combinar os dados
+        const projectAccess = accessData.map(access => ({
+          project_id: access.module_id,
+          project_name: modulesMap.get(access.module_id)?.nome || '',
+          project_slug: modulesMap.get(access.module_id)?.slug || '',
+          access_level: access.nivel_acesso as AccessLevel,
+          created_at: access.created_at,
+        }));
+
+        setUserProjectAccess(projectAccess);
+      }
 
     } catch (err: any) {
       console.error('Error fetching user details:', err);
@@ -146,9 +157,10 @@ export const useUserDetails = (userId: string | undefined) => {
     if (!userId) return false;
 
     try {
-      const { error } = await supabase.rpc('update_user_project_access', {
+      // USAR A FUNÇÃO CORRETA: update_user_module_access (não update_user_project_access)
+      const { error } = await supabase.rpc('update_user_module_access', {
         _user_id: userId,
-        _project_id: projectId,
+        _module_id: projectId, // Aqui agora é module_id
         _access_level: accessLevel || 'visualizador',
         _grant_access: grantAccess
       });
@@ -161,13 +173,13 @@ export const useUserDetails = (userId: string | undefined) => {
       toast({
         title: "Sucesso",
         description: grantAccess 
-          ? "Acesso ao projeto concedido com sucesso"
-          : "Acesso ao projeto removido com sucesso",
+          ? "Acesso ao módulo concedido com sucesso"
+          : "Acesso ao módulo removido com sucesso",
       });
 
       return true;
     } catch (err: any) {
-      console.error('Error updating project access:', err);
+      console.error('Error updating module access:', err);
       toast({
         title: "Erro",
         description: err.message || "Erro ao atualizar acesso do usuário",

@@ -9,6 +9,7 @@ import Hub from "./pages/Hub";
 import Redirect from "./pages/Redirect";
 import Users from "./pages/Users";
 import UserDetail from "./pages/UserDetail";
+import UserCreate from "./pages/UserCreate";
 import Roles from "./pages/Roles";
 import Audit from "./pages/Audit";
 import Profile from "./pages/Profile";
@@ -76,8 +77,9 @@ const App = () => (
             
             {/* Users Hub */}
             <Route path="/users" element={<ProtectedRoute component={Users} />} />
-            <Route path="/users/*" element={<ProtectedRoute component={Users} />} />
+            <Route path="/users/new" element={<ProtectedRoute component={UserCreate} />} />
             <Route path="/users/:id" element={<ProtectedRoute component={UserDetail} />} />
+            <Route path="/users/:id/edit" element={<ProtectedRoute component={UserDetail} />} />
             
             {/* RBAC Hub */}
             <Route path="/rbac" element={<ProtectedRoute component={RBAC} requireAdmin />} />

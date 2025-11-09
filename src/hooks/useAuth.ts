@@ -4,12 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { securityLogger } from '@/lib/security-logger';
 
+// Nota: rbac_auth_user_role não está nos tipos gerados do Supabase
+// Usamos @ts-expect-error para contornar isso temporariamente
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, nome: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, nome: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
 }
@@ -31,59 +34,260 @@ export const useAuthState = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Timeout de segurança para evitar travamento infinito
+    const loadingTimeout = setTimeout(() => {
+      console.warn('Auth loading timeout - forcing loading to false');
+      setLoading(false);
+    }, 10000); // 10 segundos máximo
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[useAuth] onAuthStateChange event:', event, 'session:', !!session);
+        try {
         setSession(session);
         setUser(session?.user ?? null);
+          console.log('[useAuth] Session and user set:', { hasSession: !!session, hasUser: !!session?.user });
         
-        // Check admin status
+          // Check admin status - verificação direta e confiável
         if (session?.user) {
-          setTimeout(async () => {
             try {
-              const { data, error } = await supabase
-                .rpc('user_is_admin', { user_id: session.user.id });
+              console.log('[useAuth] Checking admin status for user:', session.user.id);
               
-              if (!error) {
-                console.log('Admin check result:', data);
-                setIsAdmin(data || false);
-              } else {
-                console.error('Error checking admin status:', error);
-                // Fallback: check directly in the database
-                const { data: roleData } = await supabase
-                  .from('rbac_auth_user_role')
-                  .select('role_id, rbac_auth_role!inner(nome)')
-                  .eq('user_id', session.user.id)
-                  .eq('ativo', true)
-                  .single();
+              // Método 1: Tentar RPC primeiro (mais rápido) com timeout curto
+              let adminCheckResult = false;
+              
+              try {
+                const rpcPromise = supabase.rpc('is_admin', { _user_id: session.user.id });
+                const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => 
+                  setTimeout(() => resolve({ data: null, error: { message: 'RPC timeout' } }), 2000)
+                );
                 
-                if (roleData?.rbac_auth_role?.nome === 'admin') {
-                  setIsAdmin(true);
+                const rpcResponse = await Promise.race([rpcPromise, timeoutPromise]);
+                
+                console.log('[useAuth] RPC response:', { 
+                  hasData: !!rpcResponse.data, 
+                  dataValue: rpcResponse.data,
+                  hasError: !!rpcResponse.error,
+                  errorMessage: rpcResponse.error?.message 
+                });
+                
+                const rpcResult = rpcResponse.data;
+                const rpcError = rpcResponse.error;
+                
+                console.log('[useAuth] RPC parsed:', { 
+                  rpcResult, 
+                  rpcError: rpcError?.message || 'none', 
+                  type: typeof rpcResult,
+                  isTrue: rpcResult === true,
+                  isTruthy: !!rpcResult
+                });
+                
+                if (!rpcError && rpcResult === true) {
+                  console.log('[useAuth] User is admin (via RPC)');
+                  adminCheckResult = true;
+                } else {
+                  console.log('[useAuth] RPC failed or returned false, trying fallback. Error:', rpcError?.message || 'No error, but result is not true');
+                  // Método 2: Fallback - verificação direta na tabela (mais confiável) com timeout
+                  // Usar query simples sem join para evitar problemas de RLS
+                  try {
+                    console.log('[useAuth] Starting fallback query for user:', session.user.id);
+                    
+                    // Primeiro, buscar apenas os role_ids do usuário (sem join)
+                    const userRolesPromise = supabase
+                      // @ts-expect-error - rbac_auth_user_role não está nos tipos gerados
+                      .from('rbac_auth_user_role')
+                      .select('role_id')
+                      .eq('user_id', session.user.id)
+                      .eq('ativo', true);
+                    
+                    const fallbackTimeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => 
+                      setTimeout(() => resolve({ data: null, error: { message: 'Fallback query timeout' } }), 3000)
+                    );
+                    
+                    const userRolesResponse = await Promise.race([userRolesPromise, fallbackTimeoutPromise]);
+                    
+                    console.log('[useAuth] User roles response:', { 
+                      hasData: !!userRolesResponse.data, 
+                      dataLength: userRolesResponse.data?.length || 0,
+                      error: userRolesResponse.error?.message || 'none'
+                    });
+                    
+                    if (!userRolesResponse.error && userRolesResponse.data && userRolesResponse.data.length > 0) {
+                      const roleIds = userRolesResponse.data.map((ur: { role_id: string }) => ur.role_id);
+                      console.log('[useAuth] Found role IDs:', roleIds);
+                      
+                      // Agora buscar os nomes dos roles (todos podem ver roles)
+                      const rolesPromise = supabase
+                        .from('rbac_auth_role')
+                        .select('id, nome, ativo')
+                        .in('id', roleIds)
+                        .eq('ativo', true);
+                      
+                      const rolesTimeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => 
+                        setTimeout(() => resolve({ data: null, error: { message: 'Roles query timeout' } }), 3000)
+                      );
+                      
+                      const rolesResponse = await Promise.race([rolesPromise, rolesTimeoutPromise]);
+                      
+                      console.log('[useAuth] Roles response:', { 
+                        hasData: !!rolesResponse.data, 
+                        dataLength: rolesResponse.data?.length || 0,
+                        error: rolesResponse.error?.message || 'none',
+                        roles: rolesResponse.data
+                      });
+                      
+                      if (!rolesResponse.error && rolesResponse.data) {
+                        const hasAdminRole = rolesResponse.data.some(
+                          (role: { nome?: string; ativo?: boolean }) => role.nome === 'admin' && role.ativo === true
+                        );
+                        console.log('[useAuth] Has admin role (via fallback):', hasAdminRole);
+                        adminCheckResult = hasAdminRole;
+                      } else {
+                        console.log('[useAuth] Could not fetch roles. Error:', rolesResponse.error?.message);
+                        adminCheckResult = false;
+                      }
+                    } else {
+                      console.log('[useAuth] No user roles found. Error:', userRolesResponse.error?.message);
+                      adminCheckResult = false;
+                    }
+                  } catch (fallbackErr) {
+                    console.error('[useAuth] Fallback query error:', fallbackErr);
+                    adminCheckResult = false;
+                  }
+                }
+              } catch (err) {
+                console.error('[useAuth] Error in admin check, trying fallback:', err);
+                // Se RPC falhar completamente, tentar fallback simplificado
+                try {
+                  // @ts-expect-error - rbac_auth_user_role não está nos tipos gerados
+                  const { data: userRoles, error: userRolesError } = await supabase
+                    .from('rbac_auth_user_role')
+                    .select('role_id')
+                    .eq('user_id', session.user.id)
+                    .eq('ativo', true);
+                  
+                  if (!userRolesError && userRoles && userRoles.length > 0) {
+                    const roleIds = userRoles.map((ur: { role_id: string }) => ur.role_id);
+                    const { data: roles, error: rolesError } = await supabase
+                      .from('rbac_auth_role')
+                      .select('id, nome, ativo')
+                      .in('id', roleIds)
+                      .eq('ativo', true);
+                    
+                    if (!rolesError && roles) {
+                      const hasAdminRole = roles.some(
+                        (role: { nome?: string; ativo?: boolean }) => role.nome === 'admin' && role.ativo === true
+                      );
+                      adminCheckResult = hasAdminRole;
+                    }
+                  }
+                } catch (fallbackErr) {
+                  console.error('[useAuth] Fallback also failed:', fallbackErr);
+                  adminCheckResult = false;
+                }
+              }
+              
+              console.log('[useAuth] Final admin check result:', adminCheckResult);
+              setIsAdmin(adminCheckResult);
+              console.log('[useAuth] isAdmin state set to:', adminCheckResult);
+            } catch (err) {
+              console.error('[useAuth] Error checking admin status:', err);
+              setIsAdmin(false);
+            }
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (err) {
+          console.error('Error in auth state change:', err);
+          setIsAdmin(false);
+        } finally {
+          console.log('[useAuth] Setting loading to false (onAuthStateChange)');
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+        }
+      }
+    );
+
+    // Verificar sessão existente de forma não-bloqueante
+    // Usar Promise.race para garantir que sempre retorne
+    console.log('[useAuth] Getting existing session...');
+    
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise<{ data: { session: null } }>((resolve) => 
+        setTimeout(() => resolve({ data: { session: null } }), 3000)
+      )
+    ])
+      .then(async ({ data: { session } }) => {
+        console.log('[useAuth] Session retrieved:', !!session);
+        if (session) {
+          setSession(session);
+          setUser(session.user ?? null);
+          
+          // Verificar admin status para sessão existente
+          if (session.user) {
+            try {
+              console.log('[useAuth] Checking admin status for existing session user:', session.user.id);
+              // Método 1: Tentar RPC primeiro
+              const { data: rpcResult, error: rpcError } = await supabase
+                .rpc('is_admin', { _user_id: session.user.id });
+              
+              console.log('[useAuth] getSession RPC result:', { rpcResult, rpcError });
+              
+              if (!rpcError && rpcResult === true) {
+                console.log('[useAuth] User is admin (via RPC in getSession)');
+                setIsAdmin(true);
+              } else {
+                console.log('[useAuth] getSession RPC failed, trying fallback');
+                // Método 2: Fallback - verificação direta na tabela
+                // @ts-expect-error - rbac_auth_user_role não está nos tipos gerados
+                const { data: roleData, error: roleError } = await supabase
+                  .from('rbac_auth_user_role')
+                  .select(`
+                    role_id,
+                    rbac_auth_role!inner(nome, ativo)
+                  `)
+                  .eq('user_id', session.user.id)
+                  .eq('ativo', true);
+                
+                if (!roleError && roleData) {
+                  const hasAdminRole = roleData.some(
+                    (ur: { rbac_auth_role?: { nome?: string; ativo?: boolean } }) => 
+                      ur.rbac_auth_role?.nome === 'admin' && ur.rbac_auth_role?.ativo === true
+                  );
+                  setIsAdmin(hasAdminRole);
                 } else {
                   setIsAdmin(false);
                 }
               }
             } catch (err) {
-              console.error('Error checking admin status:', err);
+              console.error('[useAuth] Error checking admin status on initial load:', err);
               setIsAdmin(false);
             }
-          }, 100);
+          } else {
+            setIsAdmin(false);
+          }
         } else {
+          console.log('[useAuth] No session found');
           setIsAdmin(false);
         }
         
+        console.log('[useAuth] Setting loading to false (getSession)');
+        clearTimeout(loadingTimeout);
         setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      })
+      .catch((err) => {
+        console.error('[useAuth] Error getting session:', err);
+        clearTimeout(loadingTimeout);
       setLoading(false);
+        setIsAdmin(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

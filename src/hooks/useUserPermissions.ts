@@ -63,38 +63,42 @@ export const useUserPermissions = (userId: string) => {
   // Buscar permissões diretas do usuário
   const fetchUserDirectPermissions = async () => {
     try {
-      const { data, error } = await supabase
+      // Query separada sem nested joins complexos
+      const { data: userPermData, error: userPermError } = await supabase
         .from('rbac_auth_user_permission')
-        .select(`
-          *,
-          rbac_auth_permission (
-            id,
-            nome,
-            descricao,
-            modulo,
-            acao,
-            ativo,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
         .eq('ativo', true);
 
-      if (error) throw error;
+      if (userPermError) throw userPermError;
 
-      const formattedPermissions: UserPermission[] = data?.map(item => ({
-        id: item.id,
-        user_id: item.user_id,
-        permission_id: item.permission_id,
-        ativo: item.ativo,
-        data_concessao: item.data_concessao,
-        data_expiracao: item.data_expiracao,
-        granted_by: item.granted_by,
-        permission: item.rbac_auth_permission
-      })) || [];
+      // Buscar detalhes das permissões separadamente
+      if (userPermData && userPermData.length > 0) {
+        const permissionIds = userPermData.map(p => p.permission_id);
+        const { data: permissionsData, error: permissionsError } = await supabase
+          .from('rbac_auth_permission')
+          .select('*')
+          .in('id', permissionIds);
 
-      setUserPermissions(formattedPermissions);
+        if (permissionsError) throw permissionsError;
+
+        const permissionsMap = new Map(permissionsData?.map(p => [p.id, p]) || []);
+
+        const formattedPermissions: UserPermission[] = userPermData.map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          permission_id: item.permission_id,
+          ativo: item.ativo,
+          data_concessao: item.data_concessao,
+          data_expiracao: item.data_expiracao,
+          granted_by: item.granted_by,
+          permission: permissionsMap.get(item.permission_id)
+        }));
+
+        setUserPermissions(formattedPermissions);
+      } else {
+        setUserPermissions([]);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar permissões diretas do usuário';
       setError(errorMessage);
@@ -109,52 +113,56 @@ export const useUserPermissions = (userId: string) => {
   // Buscar permissões via roles do usuário
   const fetchUserRolePermissions = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Buscar roles do usuário
+      const { data: userRolesData, error: userRolesError } = await supabase
         .from('rbac_auth_user_role')
-        .select(`
-          role_id,
-          ativo,
-          rbac_auth_role_permission (
-            id,
-            role_id,
-            permission_id,
-            ativo,
-            created_at,
-            rbac_auth_permission (
-              id,
-              nome,
-              descricao,
-              modulo,
-              acao,
-              ativo,
-              created_at,
-              updated_at
-            )
-          )
-        `)
+        .select('role_id, ativo')
         .eq('user_id', userId)
         .eq('ativo', true);
 
-      if (error) throw error;
-
-      const formattedRolePermissions: RolePermission[] = [];
+      if (userRolesError) throw userRolesError;
       
-      data?.forEach(userRole => {
-        if (userRole.ativo) {
-          userRole.rbac_auth_role_permission?.forEach(rolePerm => {
-            if (rolePerm.concedida) {
-              formattedRolePermissions.push({
-                id: rolePerm.id,
-                role_id: rolePerm.role_id,
-                permission_id: rolePerm.permission_id,
-                ativo: rolePerm.concedida,
-                created_at: rolePerm.created_at,
-                permission: rolePerm.rbac_auth_permission
-              });
-            }
-          });
-        }
-      });
+      if (!userRolesData || userRolesData.length === 0) {
+        setRolePermissions([]);
+        return;
+      }
+
+      // 2. Buscar permissões dos roles
+      const roleIds = userRolesData.map(r => r.role_id);
+      const { data: rolePermData, error: rolePermError } = await supabase
+        .from('rbac_auth_role_permission')
+        .select('id, role_id, permission_id, concedida, created_at')
+        .in('role_id', roleIds)
+        .eq('concedida', true);
+
+      if (rolePermError) throw rolePermError;
+      
+      if (!rolePermData || rolePermData.length === 0) {
+        setRolePermissions([]);
+        return;
+      }
+
+      // 3. Buscar detalhes das permissões
+      const permissionIds = rolePermData.map(rp => rp.permission_id);
+      const { data: permissionsData, error: permissionsError } = await supabase
+        .from('rbac_auth_permission')
+        .select('*')
+        .in('id', permissionIds);
+
+      if (permissionsError) throw permissionsError;
+
+      // 4. Montar mapa de permissões
+      const permissionsMap = new Map(permissionsData?.map(p => [p.id, p]) || []);
+
+      // 5. Formatar permissões com os detalhes
+      const formattedRolePermissions: RolePermission[] = rolePermData.map(rolePerm => ({
+        id: rolePerm.id,
+        role_id: rolePerm.role_id,
+        permission_id: rolePerm.permission_id,
+        ativo: rolePerm.concedida, // Campo 'concedida' no banco, mas usamos 'ativo' na interface
+        created_at: rolePerm.created_at,
+        permission: permissionsMap.get(rolePerm.permission_id)
+      }));
 
       setRolePermissions(formattedRolePermissions);
     } catch (err) {
