@@ -20,6 +20,13 @@ interface CardHubItemProps {
   disabled?: boolean;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  // Estatísticas detalhadas
+  userAccessCount?: number;
+  totalAccessCount?: number;
+  uniqueUsers?: number;
+  successRate?: number;
+  lastAccess?: string;
+  lastUserAccess?: string;
 }
 
 export const CardHubItem: React.FC<CardHubItemProps> = ({
@@ -36,7 +43,24 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
   disabled = false,
   isFavorite = false,
   onToggleFavorite,
+  userAccessCount,
+  totalAccessCount,
+  uniqueUsers,
+  successRate,
+  lastAccess,
+  lastUserAccess,
 }) => {
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return 'Nunca acessado';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
   const navigate = useNavigate();
   const designTokens = useDesignTokens();
 
@@ -129,11 +153,38 @@ export const CardHubItem: React.FC<CardHubItemProps> = ({
             </p>
             {status && (
               <p
-                className="mt-3 text-xs font-medium"
-                style={{ color: designTokens.colors.success.DEFAULT }}
+                className={cn(
+                  "mt-3 text-xs font-medium",
+                  status === 'Disponível' ? 'text-green-600' : 'text-yellow-600'
+                )}
               >
                 {status}
               </p>
+            )}
+            
+            {/* Estatísticas detalhadas */}
+            {(userAccessCount !== undefined || totalAccessCount !== undefined) && (
+              <div className="mt-4 space-y-1 text-xs text-gray-600">
+                {userAccessCount !== undefined && (
+                  <p>
+                    {userAccessCount > 0 
+                      ? `${userAccessCount} acessos seus`
+                      : 'Nenhum acesso seu ainda'}
+                  </p>
+                )}
+                {lastUserAccess && (
+                  <p className="text-gray-500">
+                    {formatDate(lastUserAccess)}
+                  </p>
+                )}
+                {totalAccessCount !== undefined && (
+                  <p className="text-gray-500">
+                    {totalAccessCount} acessos totais
+                    {uniqueUsers !== undefined && ` - ${uniqueUsers} usuários`}
+                    {successRate !== undefined && ` - ${Math.round(successRate)}% sucesso`}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>

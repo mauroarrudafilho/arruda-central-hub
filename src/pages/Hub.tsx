@@ -5,39 +5,31 @@ import { useAuthState } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useDesignTokens } from '@/hooks/useDesignTokens';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { useProjects, useProjectModules, ProjectModule } from '@/hooks/useProjects';
-import { useProjectContext } from '@/contexts/ProjectContext';
+import { useProjects, Project } from '@/hooks/useProjects';
+import { useProjectDetailedStats } from '@/hooks/useProjectDetailedStats';
 import { BackgroundGlow } from '@/components/BackgroundGlow';
-import { logModuleAccess } from '@/services/persistenceService';
+import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
   Building2,
   BarChart3,
   DollarSign,
-  Truck,
-  Gift,
-  Activity,
-  Star,
-  Search,
-  Calculator,
-  TrendingUp,
   FileText,
-  Target,
-  GraduationCap,
   Package,
   Users,
-  Shield,
-  Lock,
-  Key,
-  Settings,
-  Globe,
+  Search,
+  Star,
   ChevronRight,
   ChevronLeft,
   Clock3,
   BarChart2,
   UserCheck,
   Menu,
+  Activity,
+  LogOut,
 } from 'lucide-react';
 import { fetchModuleUsageStats, ModuleUsageStats } from '@/services/metricsService';
 
@@ -47,40 +39,28 @@ const ICON_MAP: Record<string, IconComponent> = {
   Users,
   Building2,
   DollarSign,
-  Activity,
-  Truck,
-  Gift,
-  Calculator,
-  TrendingUp,
   BarChart3,
   FileText,
-  Target,
-  GraduationCap,
   Package,
-  Shield,
-  Lock,
-  Key,
-  Settings,
-  Globe,
 };
 
-interface NormalizedModule extends ProjectModule {
+interface NormalizedProject extends Project {
   description: string;
   targetRoute: string | null;
   Icon: IconComponent;
   isAvailable: boolean;
   statusLabel: string;
-  accessCount: number;
+  totalAccessCount: number;
   uniqueUsers: number;
   lastAccess?: string;
   successRate?: number;
   userAccessCount: number;
   userLastAccess?: string;
-  isFavoriteModule: boolean;
+  isFavoriteProject: boolean;
 }
 
 interface UserStats {
-  totalModules: number;
+  totalProjects: number;
   lastLogin: string;
   sessionExpires: string;
 }
@@ -105,19 +85,12 @@ const normalizeRoute = (route: string | null | undefined): string | null => {
   return `/${route}`;
 };
 
-const isModuleAvailable = (module: ProjectModule) => {
-  const status = (module.status || '').toLowerCase();
-  if (status === 'manutencao' || status === 'inativo') return false;
-  if (status === 'desenvolvimento' || status === 'planejado') return false;
-  return module.ativo !== false;
+const isProjectAvailable = (project: Project) => {
+  return !!project.url_vercel;
 };
 
-const getStatusLabel = (module: ProjectModule, available: boolean) => {
+const getStatusLabel = (project: Project, available: boolean) => {
   if (available) return 'Disponível';
-  const status = (module.status || '').toLowerCase();
-  if (status === 'manutencao') return 'Em manutenção';
-  if (status === 'desenvolvimento') return 'Em desenvolvimento';
-  if (status === 'planejado') return 'Planejado';
   return 'Indisponível';
 };
 
@@ -136,15 +109,18 @@ const formatDateTime = (dateString?: string) => {
 };
 
 const Hub = () => {
+  console.log('🔵 Hub component renderizado');
   const navigate = useNavigate();
   const { user } = useAuthState();
   const designTokens = useDesignTokens();
-  const { isFavorite, toggleFavorite } = useUserPreferences();
+  const { isFavoriteProject, toggleFavoriteProject } = useUserPreferences();
   const userId = user?.id ?? null;
 
   const { projects, loading: projectsLoading } = useProjects();
-  const { currentProject, setCurrentProject, setProjects } = useProjectContext();
-  const { modules, loading: modulesLoading } = useProjectModules(currentProject?.id ?? null);
+  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+  const { getProjectStats, loading: statsLoading } = useProjectDetailedStats(projectIds);
+  
+  console.log('🔵 Hub - user:', user?.id, 'projects count:', projects?.length);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -153,7 +129,7 @@ const Hub = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [moduleUsageStats, setModuleUsageStats] = useState<ModuleUsageStats[]>([]);
   const [moduleUsageLoading, setModuleUsageLoading] = useState(false);
-  const [userModuleInsights, setUserModuleInsights] = useState<Record<string, { count: number; lastAccess?: string }>>({});
+  const [userProjectInsights, setUserProjectInsights] = useState<Record<string, { count: number; lastAccess?: string }>>({});
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(true);
 
   const loadModuleUsageStats = useCallback(async () => {
@@ -162,15 +138,15 @@ const Hub = () => {
       const stats = await fetchModuleUsageStats();
       setModuleUsageStats(stats);
     } catch (error) {
-      console.error('Erro ao buscar estatísticas de módulos:', error);
+      console.error('Erro ao buscar estatísticas de projetos:', error);
     } finally {
       setModuleUsageLoading(false);
     }
   }, []);
 
-  const loadUserModuleInsights = useCallback(async () => {
+  const loadUserProjectInsights = useCallback(async () => {
     if (!userId) {
-      setUserModuleInsights({});
+      setUserProjectInsights({});
       return;
     }
 
@@ -179,27 +155,27 @@ const Hub = () => {
         .from('resource_access_log')
         .select('metadata, created_at')
         .eq('user_id', userId)
-        .eq('resource_type', 'module_access')
+        .eq('resource_type', 'project_access')
         .order('created_at', { ascending: false })
         .limit(500);
 
       if (error) throw error;
 
       const insights = (data || []).reduce<Record<string, { count: number; lastAccess?: string }>>((acc, item) => {
-        const metadata = (item as any)?.metadata as { module_name?: string } | null;
-        const moduleName = metadata?.module_name;
+        const metadata = (item as any)?.metadata as { project_name?: string; project_id?: string } | null;
+        const projectId = metadata?.project_id;
 
-        if (!moduleName) {
+        if (!projectId) {
           return acc;
         }
 
-        const current = acc[moduleName] ?? { count: 0, lastAccess: undefined };
+        const current = acc[projectId] ?? { count: 0, lastAccess: undefined };
         const updatedCount = current.count + 1;
         const currentLastAccess = current.lastAccess;
         const shouldReplaceLastAccess =
           !currentLastAccess || new Date(item.created_at) > new Date(currentLastAccess);
 
-        acc[moduleName] = {
+        acc[projectId] = {
           count: updatedCount,
           lastAccess: shouldReplaceLastAccess ? item.created_at : currentLastAccess,
         };
@@ -207,9 +183,9 @@ const Hub = () => {
         return acc;
       }, {});
 
-      setUserModuleInsights(insights);
+      setUserProjectInsights(insights);
     } catch (error) {
-      console.error('Erro ao buscar insights do usuário para módulos:', error);
+      console.error('Erro ao buscar insights do usuário para projetos:', error);
     }
   }, [userId]);
 
@@ -218,76 +194,46 @@ const Hub = () => {
   }, [loadModuleUsageStats]);
 
   useEffect(() => {
-    loadUserModuleInsights();
-  }, [loadUserModuleInsights]);
+    loadUserProjectInsights();
+  }, [loadUserProjectInsights]);
 
-  const moduleUsageStatsMap = useMemo(() => {
-    return moduleUsageStats.reduce<Record<string, ModuleUsageStats>>((acc, stat) => {
-      if (stat.moduleName) {
-        acc[stat.moduleName] = stat;
-      }
-      if (stat.displayName) {
-        acc[stat.displayName] = stat;
-      }
-      if (stat.moduleId) {
-        acc[stat.moduleId] = stat;
-      }
-      return acc;
-    }, {});
-  }, [moduleUsageStats]);
+  const normalizedProjects: NormalizedProject[] = useMemo(() => {
+    return projects.map((project) => {
+      const available = isProjectAvailable(project);
+      const description = project.descricao || 'Projeto do sistema Arruda Hub';
+      const targetRoute = normalizeRoute(project.url_vercel);
 
-  useEffect(() => {
-    if (!projectsLoading) {
-      setProjects(projects);
-      if (!currentProject && projects.length > 0) {
-        setCurrentProject(projects[0]);
-      }
-    }
-  }, [projects, projectsLoading, currentProject, setProjects, setCurrentProject]);
-
-  const normalizedModules: NormalizedModule[] = useMemo(() => {
-    return modules.map((module) => {
-      const available = isModuleAvailable(module);
-      const description = module.descricao || 'Módulo do sistema Arruda Hub';
-      const targetRoute = normalizeRoute(module.url_externa ?? module.rota);
-      const usageStats =
-        moduleUsageStatsMap[module.slug] ??
-        moduleUsageStatsMap[module.nome] ??
-        moduleUsageStatsMap[module.id];
-      const userInsight =
-        userModuleInsights[module.slug] ??
-        userModuleInsights[module.nome] ??
-        userModuleInsights[module.id];
+      const stats = getProjectStats(project.id);
+      const userInsight = userProjectInsights[project.id];
 
       return {
-        ...module,
+        ...project,
         description,
         targetRoute,
-        Icon: resolveIcon(module.icone),
+        Icon: resolveIcon(project.icone),
         isAvailable: available && !!targetRoute,
-        statusLabel: getStatusLabel(module, available && !!targetRoute),
-        accessCount: usageStats?.accessCount ?? 0,
-        uniqueUsers: usageStats?.uniqueUsers ?? 0,
-        lastAccess: usageStats?.lastAccess,
-        successRate: usageStats?.successRate,
-        userAccessCount: userInsight?.count ?? 0,
-        userLastAccess: userInsight?.lastAccess,
-        isFavoriteModule: isFavorite(module.id),
+        statusLabel: getStatusLabel(project, available && !!targetRoute),
+        totalAccessCount: stats?.totalAccessCount ?? 0,
+        uniqueUsers: stats?.uniqueUsers ?? 0,
+        lastAccess: stats?.lastAccess,
+        successRate: stats?.successRate,
+        userAccessCount: stats?.userAccessCount ?? userInsight?.count ?? 0,
+        userLastAccess: stats?.lastUserAccess ?? userInsight?.lastAccess,
+        isFavoriteProject: isFavoriteProject(project.id),
       };
     });
-  }, [modules, moduleUsageStatsMap, userModuleInsights, isFavorite]);
+  }, [projects, getProjectStats, userProjectInsights, isFavoriteProject]);
 
-  const filteredModules = useMemo(() => {
+  const filteredProjects = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return normalizedModules;
+    if (!term) return normalizedProjects;
 
-    return normalizedModules.filter((module) => {
+    return normalizedProjects.filter((project) => {
       const haystack = [
-        module.nome,
-        module.slug,
-        module.description,
-        module.status,
-        module.categoria,
+        project.nome,
+        project.slug,
+        project.description,
+        project.status,
       ]
         .filter(Boolean)
         .join(' ')
@@ -295,21 +241,21 @@ const Hub = () => {
 
       return haystack.includes(term);
     });
-  }, [normalizedModules, searchTerm]);
+  }, [normalizedProjects, searchTerm]);
 
   const favorites = useMemo(
-    () => filteredModules.filter((module) => module.isFavoriteModule),
-    [filteredModules]
+    () => filteredProjects.filter((project) => project.isFavoriteProject),
+    [filteredProjects]
   );
 
-  const sortedModules = useMemo(() => {
-    return [...filteredModules].sort((a, b) => {
-      if (a.isFavoriteModule === b.isFavoriteModule) {
+  const sortedProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      if (a.isFavoriteProject === b.isFavoriteProject) {
         return a.nome.localeCompare(b.nome, 'pt-BR');
       }
-      return a.isFavoriteModule ? -1 : 1;
+      return a.isFavoriteProject ? -1 : 1;
     });
-  }, [filteredModules]);
+  }, [filteredProjects]);
 
   const loadUserStats = useCallback(async () => {
     if (!userId) return;
@@ -321,17 +267,17 @@ const Hub = () => {
         .eq('user_id', userId)
         .single();
 
-      const availableModules = normalizedModules.filter((module) => module.isAvailable).length;
+      const availableProjects = normalizedProjects.filter((project) => project.isAvailable).length;
 
       setUserStats({
-        totalModules: availableModules,
+        totalProjects: availableProjects,
         lastLogin: profile?.ultimo_login || new Date().toISOString(),
         sessionExpires: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  }, [userId, normalizedModules]);
+  }, [userId, normalizedProjects]);
 
   useEffect(() => {
     loadUserStats();
@@ -350,7 +296,6 @@ const Hub = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // Função para calcular indicadores com múltiplas tentativas
     const updateIndicators = () => {
       if (!container) return;
       
@@ -361,11 +306,9 @@ const Hub = () => {
       setShowRightIndicator(hasHorizontalScroll && scrollLeft < scrollWidth - clientWidth - 20);
     };
 
-    // Aguardar múltiplos frames e um pequeno delay para garantir que o DOM foi totalmente renderizado
     let timeoutId: NodeJS.Timeout | null = null;
     const frame1 = requestAnimationFrame(() => {
       const frame2 = requestAnimationFrame(() => {
-        // Pequeno delay adicional para garantir que o layout foi calculado
         timeoutId = setTimeout(() => {
           updateIndicators();
         }, 100);
@@ -374,13 +317,11 @@ const Hub = () => {
 
     container.addEventListener('scroll', handleScroll);
     
-    // Usar ResizeObserver para detectar mudanças no tamanho do container
     const resizeObserver = new ResizeObserver(() => {
       updateIndicators();
     });
     resizeObserver.observe(container);
 
-    // Também atualizar quando a janela redimensionar
     window.addEventListener('resize', updateIndicators);
 
     return () => {
@@ -390,46 +331,157 @@ const Hub = () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateIndicators);
     };
-  }, [handleScroll, sortedModules.length]);
+  }, [handleScroll, sortedProjects.length]);
 
-  const handleModuleAccess = async (module: NormalizedModule) => {
-    if (!module.isAvailable || !module.targetRoute) {
+  const handleProjectAccess = async (project: NormalizedProject) => {
+    console.log('🚀 handleProjectAccess chamado!', {
+      project: project.nome,
+      isAvailable: project.isAvailable,
+      targetRoute: project.targetRoute,
+      hasUser: !!user,
+    });
+
+    if (!project.isAvailable || !project.targetRoute) {
+      console.warn('⚠️ Projeto não disponível:', { isAvailable: project.isAvailable, targetRoute: project.targetRoute });
       toast({
-        title: 'Módulo indisponível',
-        description: `${module.nome} ainda não está disponível para acesso.`,
+        title: 'Projeto indisponível',
+        description: `${project.nome} ainda não está disponível para acesso.`,
         variant: 'default',
       });
       return;
     }
 
-    const isExternal = /^https?:\/\//i.test(module.targetRoute);
+    const isExternal = /^https?:\/\//i.test(project.targetRoute);
+    console.log('🔵 Tipo de projeto:', { isExternal, targetRoute: project.targetRoute });
 
     toast({
       title: 'Redirecionando',
-      description: `Acessando ${module.nome}...`,
+      description: `Acessando ${project.nome}...`,
     });
 
-    if (user) {
-      try {
-        await logModuleAccess(user.id, module.id, module.slug, 'access', {
-          targetRoute: module.targetRoute,
-          project_id: currentProject?.id ?? null,
-        });
-      } catch (err) {
-        console.warn('Falha ao registrar acesso ao módulo', err);
-      }
-    }
-
     if (isExternal) {
-      window.open(module.targetRoute, '_blank', 'noopener,noreferrer');
+      console.log('🔵 Iniciando acesso a projeto externo:', {
+        project: project.nome,
+        route: project.targetRoute,
+        hasUser: !!user,
+        userId: user?.id,
+      });
+
+      // Adicionar token SSO na URL se disponível
+      const url = new URL(project.targetRoute);
+      let ssoToken: string | null = null;
+
+      if (user) {
+        console.log('🔵 Usuário encontrado, gerando token SSO...');
+        try {
+          // Gerar token SSO para módulo externo
+          console.log('🔵 Chamando generate_sso_token com slug:', project.slug);
+          const { data: tokenData, error: tokenError } = await supabase
+            .rpc('generate_sso_token', {
+              _project_slug: project.slug,
+            });
+
+          console.log('🔵 Resposta do generate_sso_token:', {
+            hasData: !!tokenData,
+            dataLength: tokenData?.length,
+            error: tokenError,
+          });
+
+          if (!tokenError && tokenData && tokenData.length > 0) {
+            ssoToken = tokenData[0].token;
+            url.searchParams.set('sso_token', ssoToken);
+            url.searchParams.set('from', 'arruda-hub');
+            console.log('✅ Token SSO gerado e adicionado à URL:', {
+              project: project.nome,
+              url: url.toString(),
+              hasToken: !!ssoToken,
+              tokenLength: ssoToken?.length,
+              expiresAt: tokenData[0].expires_at,
+            });
+            
+            toast({
+              title: 'Token SSO gerado',
+              description: `Token válido por 12 horas. Redirecionando...`,
+              duration: 2000,
+            });
+          } else {
+            console.error('⚠️ Falha ao gerar token SSO:', {
+              error: tokenError,
+              errorMessage: tokenError?.message,
+              errorCode: tokenError?.code,
+              errorDetails: tokenError?.details,
+              hasData: !!tokenData,
+              dataLength: tokenData?.length,
+            });
+            
+            toast({
+              title: 'Aviso',
+              description: 'Token SSO não pôde ser gerado. Você pode precisar fazer login no módulo.',
+              variant: 'default',
+              duration: 3000,
+            });
+          }
+        } catch (tokenErr) {
+          console.error('❌ Erro ao gerar token SSO:', tokenErr);
+          // Continua mesmo sem token - o módulo pode pedir login
+        }
+      } else {
+        console.warn('⚠️ Usuário não encontrado, não será gerado token SSO');
+      }
+
+      // Registrar acesso ao projeto
+      if (user) {
+        try {
+          await supabase
+            .from('resource_access_log')
+            .insert({
+              user_id: user.id,
+              resource_type: 'project_access',
+              resource_path: project.targetRoute,
+              action: 'access',
+              success: true,
+              metadata: {
+                project_id: project.id,
+                project_slug: project.slug,
+                project_name: project.nome,
+                sso_token_generated: !!ssoToken, // Não armazenar o token em si por segurança
+              },
+            });
+        } catch (err) {
+          console.warn('Falha ao registrar acesso ao projeto', err);
+        }
+      }
+      
+      console.log('🔵 Abrindo URL:', url.toString());
+      window.open(url.toString(), '_blank', 'noopener,noreferrer');
     } else {
-      navigate(module.targetRoute);
+      if (user) {
+        try {
+          await supabase
+            .from('resource_access_log')
+            .insert({
+              user_id: user.id,
+              resource_type: 'project_access',
+              resource_path: project.targetRoute,
+              action: 'access',
+              success: true,
+              metadata: {
+                project_id: project.id,
+                project_slug: project.slug,
+                project_name: project.nome,
+              },
+            });
+        } catch (err) {
+          console.warn('Falha ao registrar acesso ao projeto', err);
+        }
+      }
+      navigate(project.targetRoute);
     }
   };
 
-  const isLoading = projectsLoading || modulesLoading;
+  const isLoading = projectsLoading || statsLoading;
 
-  const renderUsageMetrics = (module: NormalizedModule, options?: { compact?: boolean }) => {
+  const renderUsageMetrics = (project: NormalizedProject, options?: { compact?: boolean }) => {
     const compact = options?.compact ?? false;
 
     const iconClass = compact ? 'h-3 w-3 text-blue-500' : 'h-3.5 w-3.5 text-blue-500';
@@ -437,20 +489,20 @@ const Hub = () => {
       ? 'mt-2 flex flex-col gap-1 text-[11px] text-gray-500'
       : 'mt-4 grid grid-cols-1 gap-2 text-xs text-gray-500';
     const successRateText =
-      module.successRate !== undefined && module.successRate !== null
-        ? ` · ${Math.round(module.successRate)}% sucesso`
+      project.successRate !== undefined && project.successRate !== null
+        ? ` · ${Math.round(project.successRate)}% sucesso`
         : '';
-    const totalUsageText = `${module.accessCount} acessos totais · ${module.uniqueUsers} usuários${successRateText}`;
+    const totalUsageText = `${project.totalAccessCount} acessos totais · ${project.uniqueUsers} usuários${successRateText}`;
 
     return (
       <div className={containerClass}>
         <div className="flex items-center gap-2">
           <Activity className={iconClass} />
-          <span>{module.userAccessCount > 0 ? `${module.userAccessCount} acessos seus` : 'Nenhum acesso seu ainda'}</span>
+          <span>{project.userAccessCount > 0 ? `${project.userAccessCount} acessos seus` : 'Nenhum acesso seu ainda'}</span>
         </div>
         <div className="flex items-center gap-2">
           <Clock3 className={iconClass} />
-          <span>{formatDateTime(module.userLastAccess)}</span>
+          <span>{formatDateTime(project.userLastAccess)}</span>
         </div>
         <div className="flex items-center gap-2">
           <BarChart2 className={iconClass} />
@@ -465,47 +517,91 @@ const Hub = () => {
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center space-y-3">
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-blue-600 mx-auto"></div>
-          <p className="text-sm text-gray-600">Carregando módulos e projetos...</p>
+          <p className="text-sm text-gray-600">Carregando projetos...</p>
         </div>
       </div>
     );
   }
 
+  // Encontrar projeto mais acessado
+  const mostAccessedProject = moduleUsageStats.length > 0 
+    ? moduleUsageStats[0].displayName || moduleUsageStats[0].moduleName
+    : sortedProjects.length > 0 && sortedProjects[0].userAccessCount > 0
+    ? sortedProjects[0].nome
+    : null;
+
+  const handleLogout = () => {
+    navigate('/auth', { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 relative w-full">
       <BackgroundGlow />
+      <Header 
+        onLogout={handleLogout}
+      />
 
-      <main className="relative z-10 w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-12">
+      <main className="relative z-10 w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-2 pb-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch w-full max-w-full">
           <div className="order-1 flex-1 min-w-0 lg:order-2 w-full">
-            <div className="mb-6">
-              <h2
-                className="mb-2 text-4xl font-bold text-gray-900"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Bem-vindo ao Arruda Hub
-              </h2>
-              <p
-                className="text-lg text-gray-600 max-w-2xl"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Sua gestão de ponta a ponta começa aqui.
-              </p>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <h2
+                  className="mb-1 text-4xl font-bold text-gray-900"
+                  style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                >
+                  Bem-vindo ao Arruda Hub
+                </h2>
+                <p
+                  className="text-lg text-gray-600 max-w-2xl"
+                  style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                >
+                  Sua gestão de ponta a ponta começa aqui.
+                </p>
+              </div>
+              {/* Avatar alinhado ao título */}
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-10 w-10 rounded-full p-0 hover:bg-gray-100"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src="" alt={user?.email} />
+                        <AvatarFallback className="text-sm font-medium bg-blue-600 text-white">
+                          {user?.email ? user.email.split('@')[0].split('.').map(part => part.charAt(0).toUpperCase()).join('').slice(0, 2) : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.email}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          Administrador
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="relative w-full max-w-lg">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar módulos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-                />
-              </div>
-
               <div className="flex flex-1 flex-wrap gap-x-6 gap-y-3 text-sm text-gray-600">
                 {userStats && (
                   <>
@@ -526,12 +622,10 @@ const Hub = () => {
                     <span>Atualizando métricas de uso...</span>
                   </div>
                 ) : (
-                  moduleUsageStats.length > 0 && (
+                  mostAccessedProject && (
                     <div className="flex items-center gap-2">
                       <UserCheck className="h-4 w-4 text-blue-500" />
-                      <span>
-                        Módulo mais acessado: {moduleUsageStats[0].displayName || moduleUsageStats[0].moduleName}
-                      </span>
+                      <span>Módulo mais acessado: {mostAccessedProject}</span>
                     </div>
                   )
                 )}
@@ -573,31 +667,31 @@ const Hub = () => {
                 {favorites.length > 0 ? (
                   isQuickAccessOpen && (
                     <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
-                      {favorites.map((module) => (
+                      {favorites.map((project) => (
                         <button
-                          key={`favorite-mobile-${module.id}`}
+                          key={`favorite-mobile-${project.id}`}
                           className={cn(
                             'flex w-56 flex-shrink-0 items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-sm transition-colors duration-200',
-                            module.isAvailable
+                            project.isAvailable
                               ? 'hover:border-blue-300 hover:shadow-md'
                               : 'cursor-not-allowed opacity-60'
                           )}
-                          onClick={() => module.isAvailable && handleModuleAccess(module)}
-                          disabled={!module.isAvailable}
-                          aria-label={`Acessar módulo favorito ${module.nome}`}
+                          onClick={() => project.isAvailable && handleProjectAccess(project)}
+                          disabled={!project.isAvailable}
+                          aria-label={`Acessar projeto favorito ${project.nome}`}
                           type="button"
                         >
                           <div
                             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
                             style={{ backgroundColor: designTokens.colors.primary[50] }}
                           >
-                            <module.Icon className="h-4 w-4 text-blue-600" />
+                            <project.Icon className="h-4 w-4 text-blue-600" />
                           </div>
                           <span
                             className="truncate text-sm font-medium text-gray-900"
                             style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                           >
-                            {module.nome}
+                            {project.nome}
                           </span>
                         </button>
                       ))}
@@ -605,7 +699,7 @@ const Hub = () => {
                   )
                 ) : (
                   <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
-                    Selecione módulos favoritos para tê-los aqui como acesso rápido.
+                    Selecione projetos favoritos para tê-los aqui como acesso rápido.
                   </div>
                 )}
               </div>
@@ -619,9 +713,9 @@ const Hub = () => {
                 Todos os módulos
               </h3>
 
-              {filteredModules.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
-                  Nenhum módulo encontrado para o projeto selecionado.
+                  Nenhum projeto encontrado.
                 </div>
               ) : (
                 <div className="relative w-full overflow-hidden">
@@ -656,15 +750,60 @@ const Hub = () => {
                         minWidth: 'max-content',
                       }}
                     >
-                      {sortedModules.map((module) => (
-                        <button
-                          key={module.id}
+                      {sortedProjects.map((project) => (
+                        <div
+                          key={project.id}
                           className={`w-80 flex-shrink-0 rounded-lg border border-gray-200 bg-white p-6 text-left shadow-sm transition-all duration-200 hover:shadow-md ${
-                            module.isAvailable ? 'cursor-pointer hover:border-blue-300' : 'cursor-not-allowed opacity-50'
+                            project.isAvailable ? 'cursor-pointer hover:border-blue-300' : 'cursor-not-allowed opacity-50'
                           }`}
-                          onClick={() => module.isAvailable && handleModuleAccess(module)}
-                          disabled={!module.isAvailable}
-                          aria-label={`Acessar módulo ${module.nome}`}
+                          onClick={async (e) => {
+                            // Não executar se clicou no botão de favorito
+                            if ((e.target as HTMLElement).closest('button[data-favorite-button]')) {
+                              return;
+                            }
+                            
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Log imediato para debug
+                            const logData = {
+                              project: project.nome,
+                              isAvailable: project.isAvailable,
+                              targetRoute: project.targetRoute,
+                              projectId: project.id,
+                              timestamp: new Date().toISOString(),
+                            };
+                            
+                            console.log('🖱️ Card clicado!', logData);
+                            
+                            if (project.isAvailable) {
+                              console.log('✅ Projeto disponível, chamando handleProjectAccess...');
+                              try {
+                                await handleProjectAccess(project);
+                              } catch (err) {
+                                console.error('❌ Erro em handleProjectAccess:', err);
+                                toast({
+                                  title: 'Erro ao acessar projeto',
+                                  description: err instanceof Error ? err.message : 'Erro desconhecido',
+                                  variant: 'destructive',
+                                });
+                              }
+                            } else {
+                              console.warn('⚠️ Projeto não disponível, clique ignorado', {
+                                isAvailable: project.isAvailable,
+                                targetRoute: project.targetRoute,
+                              });
+                            }
+                          }}
+                          role={project.isAvailable ? 'button' : undefined}
+                          tabIndex={project.isAvailable ? 0 : undefined}
+                          aria-label={`Acessar projeto ${project.nome}`}
+                          onKeyDown={(e) => {
+                            if (project.isAvailable && (e.key === 'Enter' || e.key === ' ')) {
+                              e.preventDefault();
+                              handleProjectAccess(project);
+                            }
+                          }}
                         >
                           <div className="flex items-start space-x-4">
                             <div className="flex-shrink-0">
@@ -672,7 +811,7 @@ const Hub = () => {
                                 className="flex h-12 w-12 items-center justify-center rounded-lg"
                                 style={{ backgroundColor: designTokens.colors.primary[50] }}
                               >
-                                <module.Icon className="h-6 w-6 text-blue-600" />
+                                <project.Icon className="h-6 w-6 text-blue-600" />
                               </div>
                             </div>
                             <div className="min-w-0 flex-1">
@@ -681,20 +820,22 @@ const Hub = () => {
                                   className="text-lg font-semibold text-gray-900"
                                   style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                                 >
-                                  {module.nome}
+                                  {project.nome}
                                 </h3>
                                 <button
+                                  data-favorite-button
                                   onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                    toggleFavorite(module.id);
+                                    toggleFavoriteProject(project.id);
                                   }}
-                                  className="rounded-full p-1 transition-colors hover:bg-gray-100"
-                                  aria-label={isFavorite(module.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                  className="rounded-full p-1 transition-colors hover:bg-gray-100 cursor-pointer"
+                                  aria-label={isFavoriteProject(project.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                                   type="button"
                                 >
                                   <Star
                                     className={`h-4 w-4 ${
-                                      isFavorite(module.id)
+                                      isFavoriteProject(project.id)
                                         ? 'fill-yellow-400 text-yellow-400'
                                         : 'text-gray-400 hover:text-yellow-400'
                                     }`}
@@ -705,17 +846,17 @@ const Hub = () => {
                                 className="mb-3 text-sm text-gray-600"
                                 style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                               >
-                                {module.description}
+                                {project.description}
                               </p>
                               <div className="flex items-center text-xs">
-                                <span className={module.isAvailable ? 'text-green-600' : 'text-yellow-600'}>
-                                  {module.statusLabel}
+                                <span className={project.isAvailable ? 'text-green-600' : 'text-yellow-600'}>
+                                  {project.statusLabel}
                                 </span>
                               </div>
-                              {renderUsageMetrics(module)}
+                              {renderUsageMetrics(project)}
                             </div>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -779,22 +920,22 @@ const Hub = () => {
                         !isQuickAccessOpen && 'items-center'
                       )}
                     >
-                      {favorites.map((module) => (
+                      {favorites.map((project) => (
                         <button
-                          key={`favorite-sidebar-${module.id}`}
+                          key={`favorite-sidebar-${project.id}`}
                           className={cn(
                             'rounded-lg border border-gray-200 text-left transition-all duration-200',
-                            module.isAvailable
+                            project.isAvailable
                               ? 'hover:border-blue-300 hover:shadow-sm'
                               : 'cursor-not-allowed opacity-60',
                             isQuickAccessOpen
                               ? 'flex w-full items-center gap-3 p-3'
                               : 'flex w-12 flex-col items-center justify-center gap-1 p-2'
                           )}
-                          onClick={() => module.isAvailable && handleModuleAccess(module)}
-                          disabled={!module.isAvailable}
-                          aria-label={`Acessar módulo favorito ${module.nome}`}
-                          title={module.nome}
+                          onClick={() => project.isAvailable && handleProjectAccess(project)}
+                          disabled={!project.isAvailable}
+                          aria-label={`Acessar projeto favorito ${project.nome}`}
+                          title={project.nome}
                           type="button"
                         >
                           <div
@@ -804,7 +945,7 @@ const Hub = () => {
                             )}
                             style={{ backgroundColor: designTokens.colors.primary[50] }}
                           >
-                            <module.Icon
+                            <project.Icon
                               className={cn(
                                 'text-blue-600 transition-all duration-200',
                                 isQuickAccessOpen ? 'h-4 w-4' : 'h-5 w-5'
@@ -816,20 +957,18 @@ const Hub = () => {
                               className="truncate text-sm font-medium text-gray-900"
                               style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                             >
-                              {module.nome}
+                              {project.nome}
                             </span>
                           ) : (
-                            <span className="sr-only">{module.nome}</span>
+                            <span className="sr-only">{project.nome}</span>
                           )}
                         </button>
                       ))}
                     </div>
-
-                    
                   </>
                 ) : (
                   <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
-                    Selecione módulos favoritos para tê-los aqui como acesso rápido.
+                    Selecione projetos favoritos para tê-los aqui como acesso rápido.
                   </div>
                 )}
               </div>

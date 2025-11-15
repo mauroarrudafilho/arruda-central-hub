@@ -25,7 +25,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/hub';
 
   // Redirect if already logged in
   useEffect(() => {

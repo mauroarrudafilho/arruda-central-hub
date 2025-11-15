@@ -8,17 +8,22 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
-  const { user, loading, isAdmin } = useAuthState();
+  const { user, loading, isAdmin, adminChecked } = useAuthState();
   const location = useLocation();
 
-  if (loading) {
+  // Se ainda está carregando, mostrar spinner
+  if (loading || (requireAdmin && !adminChecked)) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="text-sm text-muted-foreground">Verificando autenticação...</p>
+        </div>
       </div>
     );
   }
 
+  // Se não há usuário, redirecionar para login
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }

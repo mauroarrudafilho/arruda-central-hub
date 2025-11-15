@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthState } from './useAuth';
+import { useAuthState } from '@/hooks/useAuth';
 import { toast } from './use-toast';
 
 interface UserPreferences {
   favorite_modules: string[];
+  favorite_projects: string[];
   theme: 'light' | 'dark';
   notifications: boolean;
   language: string;
@@ -15,12 +16,15 @@ interface UseUserPreferencesReturn {
   isLoading: boolean;
   error: string | null;
   toggleFavorite: (moduleId: string) => Promise<void>;
+  toggleFavoriteProject: (projectId: string) => Promise<void>;
   updatePreferences: (newPreferences: Partial<UserPreferences>) => Promise<void>;
   isFavorite: (moduleId: string) => boolean;
+  isFavoriteProject: (projectId: string) => boolean;
 }
 
 const defaultPreferences: UserPreferences = {
   favorite_modules: [],
+  favorite_projects: [],
   theme: 'light',
   notifications: true,
   language: 'pt-BR',
@@ -45,12 +49,15 @@ export const useUserPreferences = (): UseUserPreferencesReturn => {
       // Buscar preferências do user_metadata
       const userPreferences = user.user_metadata?.preferences || defaultPreferences;
       
-      // Garantir que favorite_modules seja um array
+      // Garantir que favorite_modules e favorite_projects sejam arrays
       const safePreferences: UserPreferences = {
         ...defaultPreferences,
         ...userPreferences,
         favorite_modules: Array.isArray(userPreferences.favorite_modules) 
           ? userPreferences.favorite_modules 
+          : [],
+        favorite_projects: Array.isArray(userPreferences.favorite_projects) 
+          ? userPreferences.favorite_projects 
           : [],
       };
 
@@ -127,8 +134,37 @@ export const useUserPreferences = (): UseUserPreferencesReturn => {
     }
   };
 
+  const toggleFavoriteProject = async (projectId: string) => {
+    try {
+      const currentFavorites = preferences.favorite_projects;
+      const isCurrentlyFavorite = currentFavorites.includes(projectId);
+      
+      const newFavorites = isCurrentlyFavorite
+        ? currentFavorites.filter(id => id !== projectId)
+        : [...currentFavorites, projectId];
+
+      await updatePreferences({
+        favorite_projects: newFavorites,
+      });
+
+      // Feedback visual imediato
+      toast({
+        title: isCurrentlyFavorite ? "Removido dos favoritos" : "Adicionado aos favoritos",
+        description: isCurrentlyFavorite 
+          ? "Projeto removido da sua lista de favoritos."
+          : "Projeto adicionado à sua lista de favoritos.",
+      });
+    } catch (err) {
+      console.error('Erro ao alternar favorito do projeto:', err);
+    }
+  };
+
   const isFavorite = (moduleId: string): boolean => {
     return preferences.favorite_modules.includes(moduleId);
+  };
+
+  const isFavoriteProject = (projectId: string): boolean => {
+    return preferences.favorite_projects.includes(projectId);
   };
 
   useEffect(() => {
@@ -140,8 +176,10 @@ export const useUserPreferences = (): UseUserPreferencesReturn => {
     isLoading,
     error,
     toggleFavorite,
+    toggleFavoriteProject,
     updatePreferences,
     isFavorite,
+    isFavoriteProject,
   };
 };
 

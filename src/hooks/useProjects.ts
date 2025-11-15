@@ -7,7 +7,9 @@ export interface Project {
   descricao: string | null;
   slug: string;
   status: string;
-  nivel_acesso: 'admin' | 'gestor' | 'visualizador';
+  url_vercel?: string | null;
+  icone?: string | null;
+  nivel_acesso?: 'admin' | 'gestor' | 'visualizador';
 }
 
 export interface ProjectModule {
@@ -137,11 +139,18 @@ export const useProjects = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.rpc('get_user_projects');
+      // Tentar buscar todos os projetos primeiro
+      const { data: allData, error: allError } = await supabase.rpc('get_all_projects');
       
-      if (error) throw error;
-      
-      setProjects(data || []);
+      if (!allError && allData) {
+        // Se get_all_projects funcionar, usar ela
+        setProjects(allData || []);
+      } else {
+        // Fallback para get_user_projects
+        const { data, error } = await supabase.rpc('get_user_projects');
+        if (error) throw error;
+        setProjects(data || []);
+      }
     } catch (err: any) {
       console.error('Error fetching projects:', err);
       setError(err.message);

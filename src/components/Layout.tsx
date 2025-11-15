@@ -1,6 +1,6 @@
-import { Users, Shield, Activity, User, LogOut, Building2, Home } from 'lucide-react';
+import { Users, Shield, Activity, User, LogOut, Building2, Home, Star } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthState } from '@/hooks/useAuth';
 import { useProjects, useProjectModules } from '@/hooks/useProjects';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useProjectContext } from '@/contexts/ProjectContext';
 
 function AppSidebar() {
@@ -27,6 +28,11 @@ function AppSidebar() {
   const { projects, loading: projectsLoading } = useProjects();
   const { currentProject, setCurrentProject, setProjects } = useProjectContext();
   const { modules, loading: modulesLoading } = useProjectModules(currentProject?.id || null);
+  const { isFavoriteProject } = useUserPreferences();
+
+  const favoriteProjects = useMemo(() => {
+    return projects.filter(p => isFavoriteProject(p.id));
+  }, [projects, isFavoriteProject]);
 
   // Atualizar projetos no contexto quando carregados
   useEffect(() => {
@@ -86,6 +92,40 @@ function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent>
+        {/* Projetos Favoritos */}
+        {favoriteProjects.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              {isCollapsed ? "⭐" : "Favoritos"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {favoriteProjects.map((project) => {
+                  const Icon = getIcon(project.icone || 'Building2');
+                  return (
+                    <SidebarMenuItem key={project.id}>
+                      <SidebarMenuButton
+                        onClick={() => {
+                          if (project.url_vercel) {
+                            window.open(project.url_vercel, '_blank', 'noopener,noreferrer');
+                          } else {
+                            setCurrentProject(project);
+                            navigate('/hub');
+                          }
+                        }}
+                      >
+                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                        <Icon className="size-4" />
+                        {!isCollapsed && <span className="truncate">{project.nome}</span>}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {currentProject && (
           <SidebarGroup>
             <SidebarGroupLabel>
@@ -178,6 +218,7 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { currentProject } = useProjectContext();
+  const navigate = useNavigate();
   
   return (
     <SidebarProvider>
@@ -189,7 +230,7 @@ export const Layout = ({ children }: LayoutProps) => {
             <SidebarTrigger />
             <div className="ml-4 flex items-center space-x-4">
               <h1 className="text-lg font-semibold text-card-foreground">
-                {currentProject?.nome || "Sistema de Gestão"}
+                {currentProject?.nome || "Arruda Hub"}
               </h1>
               <Button 
                 variant="ghost" 
@@ -203,7 +244,7 @@ export const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
           
-          <main className="flex-1 p-6 bg-background">
+          <main className="flex-1 bg-background">
             {children}
           </main>
         </div>
