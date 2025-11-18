@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Hub from "./pages/Hub";
 import Redirect from "./pages/Redirect";
+import SSORedirect from "./pages/SSORedirect";
 import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -38,6 +39,7 @@ const App = () => (
                 <Redirect />
               </AuthGuard>
             } />
+            <Route path="/sso-redirect" element={<SSORedirect />} />
             <Route path="/profile" element={
               <AuthGuard>
                 <Profile />

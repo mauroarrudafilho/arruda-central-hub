@@ -452,8 +452,17 @@ const Hub = () => {
         }
       }
       
-      console.log('🔵 Abrindo URL:', url.toString());
-      window.open(url.toString(), '_blank', 'noopener,noreferrer');
+      // Usar página intermediária de SSO para validar antes de redirecionar
+      // Isso evita que a tela de login apareça por alguns milissegundos
+      if (ssoToken) {
+        console.log('🔵 Redirecionando via página intermediária de SSO...');
+        const ssoRedirectUrl = `/sso-redirect?sso_token=${encodeURIComponent(ssoToken)}&module=${encodeURIComponent(project.slug)}&url=${encodeURIComponent(project.targetRoute)}`;
+        window.open(ssoRedirectUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // Se não há token SSO, redirecionar diretamente
+        console.log('🔵 Abrindo URL sem SSO:', url.toString());
+        window.open(url.toString(), '_blank', 'noopener,noreferrer');
+      }
     } else {
       if (user) {
         try {
