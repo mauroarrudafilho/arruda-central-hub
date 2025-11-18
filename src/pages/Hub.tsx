@@ -452,17 +452,10 @@ const Hub = () => {
         }
       }
       
-      // Usar página intermediária de SSO para validar antes de redirecionar
-      // Isso evita que a tela de login apareça por alguns milissegundos
-      if (ssoToken) {
-        console.log('🔵 Redirecionando via página intermediária de SSO...');
-        const ssoRedirectUrl = `/sso-redirect?sso_token=${encodeURIComponent(ssoToken)}&module=${encodeURIComponent(project.slug)}&url=${encodeURIComponent(project.targetRoute)}`;
-        window.open(ssoRedirectUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        // Se não há token SSO, redirecionar diretamente
-        console.log('🔵 Abrindo URL sem SSO:', url.toString());
-        window.open(url.toString(), '_blank', 'noopener,noreferrer');
-      }
+      // Redirecionar diretamente para o módulo externo com token SSO na URL
+      // O módulo externo deve validar o token usando validate_sso_token
+      console.log('🔵 Abrindo URL com SSO:', url.toString());
+      window.open(url.toString(), '_blank', 'noopener,noreferrer');
     } else {
       if (user) {
         try {
