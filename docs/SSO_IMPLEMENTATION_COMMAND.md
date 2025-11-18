@@ -1,29 +1,37 @@
-/**
- * Hook de SSO para módulos externos do Arruda Hub
- * 
- * COMO USAR:
- * 1. Copie este arquivo para seu projeto
- * 2. Ajuste as constantes SUPABASE_URL e SUPABASE_ANON_KEY
- * 3. Use o hook no seu App.tsx ou componente principal
- * 
- * Exemplo:
- * ```tsx
- * const { user, loading, authenticated } = useSSO();
- * if (loading) return <Loading />;
- * if (!authenticated) return <RedirectToHub />;
- * return <YourApp user={user} />;
- * ```
- */
+# 📋 Comandos para Implementar SSO nos Módulos Externos
 
-import { useEffect, useState } from 'react';
+Este documento fornece comandos prontos para copiar e colar nos módulos externos, facilitando a implementação do SSO.
+
+## 🚀 Implementação Rápida (Copy & Paste)
+
+### 1. Instalar Dependência
+
+```bash
+npm install @supabase/supabase-js
+```
+
+### 2. Criar Arquivo de Configuração Supabase
+
+Crie `src/lib/supabase.ts`:
+
+```typescript
 import { createClient } from '@supabase/supabase-js';
 
-// ⚠️ AJUSTE ESTAS CONSTANTES COM OS VALORES DO SEU PROJETO
 const SUPABASE_URL = 'https://kgzybpelluftexrewyke.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnenlicGVsbHVmdGV4cmV3eWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODA4NzUsImV4cCI6MjA3MDg1Njg3NX0.tQGH9z4Sp0I23vETIrqwRvSRUGSOru1e4r5GOKgzbsI';
-const HUB_URL = 'https://arruda-central-hub.vercel.app/hub';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+```
+
+### 3. Criar Hook useSSO
+
+Crie `src/hooks/useSSO.ts` e copie o conteúdo completo de `examples/useSSO.ts` do repositório do Hub Central, ou use este código:
+
+```typescript
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+const HUB_URL = 'https://arruda-central-hub.vercel.app/hub';
 
 export interface SSOUser {
   id: string;
@@ -46,7 +54,6 @@ interface UseSSOReturn {
   authenticated: boolean;
   error: string | null;
   redirectToHub: () => void;
-  hasSSOToken: boolean; // Indica se há token SSO na URL ou localStorage
 }
 
 export const useSSO = (): UseSSOReturn => {
@@ -54,7 +61,6 @@ export const useSSO = (): UseSSOReturn => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasSSOToken, setHasSSOToken] = useState(false);
 
   useEffect(() => {
     checkSSO();
@@ -69,40 +75,22 @@ export const useSSO = (): UseSSOReturn => {
       setLoading(true);
       setError(null);
 
-      // 1. Verificar token na URL
       const urlParams = new URLSearchParams(window.location.search);
       const ssoToken = urlParams.get('sso_token');
       const fromHub = urlParams.get('from') === 'arruda-hub';
 
       if (ssoToken && fromHub) {
-        console.log('🔑 Token SSO encontrado na URL, validando...');
-        setHasSSOToken(true);
-        
-        // 2. Validar token SSO
         const { data, error: validationError } = await supabase.rpc('validate_sso_token', {
           _token: ssoToken,
         });
 
-        if (validationError) {
-          console.error('❌ Erro ao validar token SSO:', validationError);
+        if (validationError || !data || !data[0]?.is_valid) {
           setError('Token SSO inválido');
-          setHasSSOToken(false);
-          // Não redireciona - permite acesso direto se SSO falhar
-          return;
-        }
-
-        if (!data || data.length === 0 || !data[0].is_valid) {
-          console.error('❌ Token SSO inválido ou expirado');
-          setError('Token SSO inválido ou expirado');
-          setHasSSOToken(false);
-          // Não redireciona - permite acesso direto se token inválido
+          redirectToHub();
           return;
         }
 
         const sessionData = data[0];
-        console.log('✅ Token SSO válido!', { user: sessionData.user_email, project: sessionData.project_name });
-        
-        // 3. Criar objeto de usuário
         const ssoUser: SSOUser = {
           id: sessionData.user_id,
           email: sessionData.user_email,
@@ -115,32 +103,25 @@ export const useSSO = (): UseSSOReturn => {
 
         setUser(ssoUser);
         setAuthenticated(true);
-        setHasSSOToken(true);
         
-        // 4. Salvar para persistência
         localStorage.setItem('arruda_sso_user', JSON.stringify(ssoUser));
         localStorage.setItem('arruda_sso_token', ssoToken);
         localStorage.setItem('arruda_sso_expires', sessionData.expires_at);
         
-        // 5. Limpar token da URL (segurança)
         window.history.replaceState({}, '', window.location.pathname);
-        
       } else {
-        // Verificar sessão salva no localStorage
         const savedUser = localStorage.getItem('arruda_sso_user');
         const savedToken = localStorage.getItem('arruda_sso_token');
         const savedExpires = localStorage.getItem('arruda_sso_expires');
 
         if (savedUser && savedToken && savedExpires) {
-          // Verificar se não expirou
           const expiresAt = new Date(savedExpires);
           if (expiresAt > new Date()) {
-            // Validar token novamente para garantir que ainda é válido
             const { data: validationData, error: validationError } = await supabase.rpc('validate_sso_token', {
               _token: savedToken,
             });
 
-            if (!validationError && validationData && validationData.length > 0 && validationData[0].is_valid) {
+            if (!validationError && validationData?.[0]?.is_valid) {
               const sessionData = validationData[0];
               setUser({
                 id: sessionData.user_id,
@@ -152,41 +133,86 @@ export const useSSO = (): UseSSOReturn => {
                 permissions: sessionData.permissions || [],
               });
               setAuthenticated(true);
-              setHasSSOToken(true);
-              console.log('✅ Sessão restaurada do localStorage');
             } else {
-              // Token inválido, limpar mas permitir acesso direto
-              console.log('❌ Token salvo inválido, permitindo acesso direto...');
               localStorage.removeItem('arruda_sso_user');
               localStorage.removeItem('arruda_sso_token');
               localStorage.removeItem('arruda_sso_expires');
-              setHasSSOToken(false);
+              redirectToHub();
             }
           } else {
-            // Sessão expirada, limpar mas permitir acesso direto
-            console.log('ℹ️ Sessão SSO expirada, permitindo acesso direto...');
             localStorage.removeItem('arruda_sso_user');
             localStorage.removeItem('arruda_sso_token');
             localStorage.removeItem('arruda_sso_expires');
-            setHasSSOToken(false);
+            redirectToHub();
           }
         } else {
-          // Sem token e sem sessão - permitir acesso direto (login próprio do módulo)
-          console.log('ℹ️ Sem token SSO, permitindo acesso direto ao módulo');
-          setHasSSOToken(false);
-          // Não redireciona - permite que o módulo use seu próprio sistema de autenticação
+          redirectToHub();
         }
       }
     } catch (err: any) {
-      console.error('❌ Erro ao verificar SSO:', err);
       setError(err.message || 'Erro ao autenticar');
-      // Em caso de erro, permitir acesso direto ao invés de forçar redirecionamento
-      setHasSSOToken(false);
+      redirectToHub();
     } finally {
       setLoading(false);
     }
   };
 
-  return { user, loading, authenticated, error, redirectToHub, hasSSOToken };
+  return { user, loading, authenticated, error, redirectToHub };
 };
+```
+
+### 4. Integrar no App.tsx
+
+Substitua ou modifique seu `src/App.tsx`:
+
+```typescript
+import { useSSO } from './hooks/useSSO';
+
+function App() {
+  const { user, loading, authenticated } = useSSO();
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="text-sm text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return null; // Hook já redireciona automaticamente
+  }
+
+  // Usuário autenticado! Renderizar app normalmente
+  return <YourApp user={user} />;
+}
+
+export default App;
+```
+
+---
+
+## ✅ Teste Rápido
+
+Após implementar, teste:
+
+1. Faça login no Hub Central: https://arruda-central-hub.vercel.app/hub
+2. Clique em um módulo externo
+3. O módulo deve autenticar automaticamente sem pedir login
+
+---
+
+## 📝 Notas Importantes
+
+- O token SSO expira em **12 horas**
+- O token é passado na URL: `?sso_token=TOKEN&from=arruda-hub`
+- A sessão é salva no `localStorage` para persistência
+- Se o token expirar ou for inválido, o usuário é redirecionado automaticamente para o Hub
+
+---
+
+**Para documentação completa, veja**: `docs/SSO_MODULE_INTEGRATION_GUIDE.md`
 

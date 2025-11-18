@@ -24,6 +24,7 @@ DECLARE
   _project_record RECORD;
   _session_token TEXT;
   _expires_at TIMESTAMPTZ;
+  _existing_session RECORD;
 BEGIN
   -- Verificar se o usuário está autenticado
   _user_id := auth.uid();
@@ -42,52 +43,76 @@ BEGIN
     RAISE EXCEPTION 'Projeto não encontrado: %', _project_slug;
   END IF;
 
-  -- Verificar se o usuário tem acesso ao projeto
-  IF NOT (
-    public.is_admin(_user_id) OR
-    EXISTS (
-      SELECT 1 FROM rbac_user_project_access
-      WHERE project_id = _project_record.id
-        AND user_id = _user_id
+  -- No hub central, todos os usuários autenticados podem acessar
+  -- Verificação de acesso simplificada: apenas verificar se está autenticado
+  -- (Removida verificação de is_admin ou rbac_user_project_access para facilitar)
+
+  -- Verificar se já existe sessão ativa para este usuário e módulo
+  SELECT session_token, expires_at INTO _existing_session
+  FROM user_sessions
+  WHERE user_id = _user_id
+    AND frontend_module = _project_slug
+    AND status = 'ativo'
+    AND expires_at > NOW()
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF FOUND AND _existing_session.expires_at > NOW() THEN
+    -- Reutilizar token existente se ainda válido
+    _session_token := _existing_session.session_token;
+    _expires_at := _existing_session.expires_at;
+    
+    -- Atualizar última atividade
+    UPDATE user_sessions
+    SET 
+      last_activity = NOW(),
+      updated_at = NOW()
+    WHERE user_id = _user_id
+      AND frontend_module = _project_slug
+      AND session_token = _session_token;
+  ELSE
+    -- Gerar novo token único
+    _session_token := encode(gen_random_bytes(32), 'base64');
+    
+    -- Definir expiração (12 horas)
+    _expires_at := NOW() + INTERVAL '12 hours';
+
+    -- Inserir nova sessão ou atualizar existente (mesmo que expirada)
+    INSERT INTO user_sessions (
+      user_id,
+      project_id,
+      session_token,
+      frontend_module,
+      frontend_origin,
+      expires_at,
+      last_activity,
+      status
+    ) VALUES (
+      _user_id,
+      _project_record.id,
+      _session_token,
+      _project_slug,
+      COALESCE(
+        current_setting('request.headers', true)::json->>'origin',
+        'arruda-central-hub'
+      ),
+      _expires_at,
+      NOW(),
+      'ativo'
     )
-  ) THEN
-    RAISE EXCEPTION 'Usuário não tem acesso ao projeto: %', _project_slug;
+    ON CONFLICT (user_id, frontend_module)
+    DO UPDATE SET
+      session_token = _session_token,
+      project_id = _project_record.id,
+      expires_at = _expires_at,
+      last_activity = NOW(),
+      updated_at = NOW(),
+      status = 'ativo',
+      frontend_origin = COALESCE(
+        current_setting('request.headers', true)::json->>'origin',
+        'arruda-central-hub'
+      );
   END IF;
-
-  -- Gerar token único
-  _session_token := encode(gen_random_bytes(32), 'base64');
-  
-  -- Definir expiração (12 horas)
-  _expires_at := NOW() + INTERVAL '12 hours';
-
-  -- Criar ou atualizar sessão
-  INSERT INTO user_sessions (
-    user_id,
-    project_id,
-    session_token,
-    frontend_module,
-    frontend_origin,
-    expires_at,
-    last_activity,
-    status
-  ) VALUES (
-    _user_id,
-    _project_record.id,
-    _session_token,
-    _project_slug,
-    COALESCE(
-      current_setting('request.headers', true)::json->>'origin',
-      'arruda-central-hub'
-    ),
-    _expires_at,
-    NOW(),
-    'ativo'
-  )
-  ON CONFLICT (session_token) 
-  DO UPDATE SET
-    expires_at = _expires_at,
-    last_activity = NOW(),
-    updated_at = NOW();
 
   -- Retornar token e informações
   RETURN QUERY SELECT 
@@ -95,6 +120,10 @@ BEGIN
     _expires_at,
     _project_record.id,
     _project_record.nome;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log do erro e re-raise
+    RAISE EXCEPTION 'Erro ao gerar token SSO: %', SQLERRM;
 END;
 $$;
 
@@ -202,6 +231,6 @@ END;
 $$;
 
 -- Comentários
-COMMENT ON FUNCTION public.generate_sso_token IS 'Gera token SSO para acesso a módulos externos baseado no slug do projeto';
+COMMENT ON FUNCTION public.generate_sso_token IS 'Gera token SSO para acesso a módulos externos. No hub central, todos os usuários autenticados podem acessar. Token expira em 12 horas. Reutiliza token existente se ainda válido.';
 COMMENT ON FUNCTION public.validate_sso_token IS 'Valida token SSO e retorna informações do usuário e permissões';
 
