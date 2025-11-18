@@ -6,13 +6,34 @@
  * 2. Ajuste as constantes SUPABASE_URL e SUPABASE_ANON_KEY
  * 3. Use o hook no seu App.tsx ou componente principal
  * 
- * Exemplo:
+ * Exemplo básico:
  * ```tsx
- * const { user, loading, authenticated } = useSSO();
+ * const { user, loading, authenticated, hasSSOToken } = useSSO();
  * if (loading) return <Loading />;
  * if (!authenticated) return <RedirectToHub />;
  * return <YourApp user={user} />;
  * ```
+ * 
+ * Exemplo com "Voltar ao Hub" e "Sair":
+ * ```tsx
+ * const { user, hasSSOToken, redirectToHub } = useSSO();
+ * 
+ * // Botão "Voltar ao Hub" (mantém sessão SSO)
+ * <button onClick={redirectToHub}>Voltar ao Hub</button>
+ * 
+ * // Botão "Sair" (limpa sessão e vai para login)
+ * <button onClick={() => {
+ *   localStorage.removeItem('arruda_sso_user');
+ *   localStorage.removeItem('arruda_sso_token');
+ *   localStorage.removeItem('arruda_sso_expires');
+ *   window.location.href = 'https://arruda-central-hub.vercel.app/auth';
+ * }}>Sair</button>
+ * ```
+ * 
+ * IMPORTANTE:
+ * - redirectToHub() redireciona para /hub (mantém sessão SSO ativa)
+ * - Para logout completo, limpe localStorage e redirecione para /auth
+ * - Use hasSSOToken para mostrar opções apenas quando veio via SSO
  */
 
 import { useEffect, useState } from 'react';

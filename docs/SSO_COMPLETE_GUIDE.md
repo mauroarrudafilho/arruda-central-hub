@@ -19,7 +19,7 @@ O hook `useSSO` suporta **dois modos de acesso**:
 
 ### Fluxo de Autenticação
 
-```
+```text
 1. Usuário faz login no Hub Central
    ↓
 2. Usuário clica em um módulo externo
@@ -245,7 +245,7 @@ export const useSSO = (): UseSSOReturn => {
 
 No seu arquivo principal (ex: `src/App.tsx` ou `src/main.tsx`):
 
-**Opção A: SSO Obrigatório (redireciona se não tiver SSO)**
+#### Opção A: SSO Obrigatório (redireciona se não tiver SSO)
 
 ```typescript
 import { useSSO } from './hooks/useSSO';
@@ -282,7 +282,7 @@ function App() {
 export default App;
 ```
 
-**Opção B: SSO Opcional (permite acesso direto sempre)**
+#### Opção B: SSO Opcional (permite acesso direto sempre)
 
 ```typescript
 import { useSSO } from './hooks/useSSO';
@@ -415,7 +415,7 @@ interface SSOUser {
 
 ### Credenciais Supabase
 
-```
+```text
 URL: https://kgzybpelluftexrewyke.supabase.co
 ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnenlicGVsbHVmdGV4cmV3eWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODA4NzUsImV4cCI6MjA3MDg1Njg3NX0.tQGH9z4Sp0I23vETIrqwRvSRUGSOru1e4r5GOKgzbsI
 ```
@@ -458,20 +458,24 @@ console.log('Expires:', localStorage.getItem('arruda_sso_expires'));
 ### Erros Comuns e Soluções
 
 #### 1. "Token SSO inválido"
+
 - ✅ Verifique se o token está na URL: `?sso_token=...&from=arruda-hub`
 - ✅ Verifique se o token não expirou (válido por 12 horas)
 - ✅ Verifique se as credenciais do Supabase estão corretas
 
 #### 2. "Redirecionando para Hub"
+
 - ✅ Isso é normal se não houver token SSO
 - ✅ O usuário será redirecionado automaticamente para fazer login no Hub
 
 #### 3. "Erro ao validar token SSO"
+
 - ✅ Verifique a conexão com o Supabase
 - ✅ Verifique se a função `validate_sso_token` existe no banco
 - ✅ Verifique os logs do console para mais detalhes
 
 #### 4. Token não aparece na URL
+
 - ✅ Verifique se o usuário está logado no Hub
 - ✅ Verifique se o projeto tem `slug` correto no banco
 - ✅ Verifique o console do Hub para erros
@@ -490,37 +494,175 @@ console.log('Expires:', localStorage.getItem('arruda_sso_expires'));
   - [ ] Verificar se token está na URL
   - [ ] Verificar se usuário é autenticado automaticamente
   - [ ] Verificar se sessão persiste após refresh
-- [ ] Implementar logout (opcional)
+- [ ] Implementar botão "Voltar ao Hub" (recomendado)
+- [ ] Implementar logout que redireciona para login do Hub
 - [ ] Testar expiração de token (12 horas)
+- [ ] Testar navegação entre módulos via Hub
 
 ---
 
 ## 🎯 Funcionalidades Opcionais
 
-### Logout
+### Voltar ao Hub (Sem Logout)
 
-Para implementar logout que redireciona de volta ao Hub:
+Permite que o usuário retorne ao Hub para trocar de módulo sem fazer logout. A sessão SSO permanece ativa:
 
 ```typescript
 import { useSSO } from './hooks/useSSO';
+import { ArrowLeft } from 'lucide-react';
+
+function BackToHubButton() {
+  const { redirectToHub, hasSSOToken } = useSSO();
+
+  // Só mostrar se veio via SSO
+  if (!hasSSOToken) {
+    return null;
+  }
+
+  return (
+    <button 
+      onClick={redirectToHub}
+      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      Voltar ao Hub
+    </button>
+  );
+}
+```
+
+### Logout (Redireciona para Login do Hub)
+
+Implementa logout completo que limpa a sessão SSO e redireciona para a tela de login do Hub:
+
+```typescript
+import { useSSO } from './hooks/useSSO';
+import { LogOut } from 'lucide-react';
 
 function LogoutButton() {
-  const { redirectToHub } = useSSO();
+  const { redirectToHub, hasSSOToken } = useSSO();
 
   const handleLogout = () => {
-    // Limpar dados locais
+    // Limpar dados locais do SSO
     localStorage.removeItem('arruda_sso_user');
     localStorage.removeItem('arruda_sso_token');
     localStorage.removeItem('arruda_sso_expires');
     
-    // Redirecionar para Hub
-    redirectToHub();
+    // Se veio via SSO, redirecionar para login do Hub
+    if (hasSSOToken) {
+      // Redirecionar para tela de login do Hub (não para /hub)
+      window.location.href = 'https://arruda-central-hub.vercel.app/auth';
+    } else {
+      // Se não veio via SSO, fazer logout do sistema próprio
+      // (implementar sua lógica de logout local aqui)
+      console.log('Logout do sistema local');
+    }
   };
 
   return (
-    <button onClick={handleLogout}>
+    <button 
+      onClick={handleLogout}
+      className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+    >
+      <LogOut className="h-4 w-4" />
       Sair
     </button>
+  );
+}
+```
+
+### Menu Completo com Ambas Opções
+
+Exemplo de menu dropdown com "Voltar ao Hub" e "Sair":
+
+```typescript
+import { useSSO } from './hooks/useSSO';
+import { ArrowLeft, LogOut, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+
+function UserMenu() {
+  const { user, hasSSOToken, redirectToHub } = useSSO();
+
+  const handleBackToHub = () => {
+    // Voltar ao Hub sem fazer logout
+    redirectToHub();
+  };
+
+  const handleLogout = () => {
+    // Limpar sessão SSO
+    localStorage.removeItem('arruda_sso_user');
+    localStorage.removeItem('arruda_sso_token');
+    localStorage.removeItem('arruda_sso_expires');
+    
+    // Redirecionar para login do Hub
+    if (hasSSOToken) {
+      window.location.href = 'https://arruda-central-hub.vercel.app/auth';
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src="" alt={user.email} />
+            <AvatarFallback>
+              {user.email.split('@')[0].split('.').map(part => 
+                part.charAt(0).toUpperCase()
+              ).join('').slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {user.name || user.email}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user.projectName}
+            </p>
+            {hasSSOToken && (
+              <p className="text-xs leading-none text-muted-foreground mt-1">
+                Autenticado via SSO
+              </p>
+            )}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        {/* Opção: Voltar ao Hub (só aparece se veio via SSO) */}
+        {hasSSOToken && (
+          <>
+            <DropdownMenuItem onClick={handleBackToHub}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              <span>Voltar ao Hub</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        
+        {/* Opção: Sair */}
+        <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Sair</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 ```
@@ -547,7 +689,14 @@ function ProtectedComponent() {
 }
 ```
 
----
+### Diferença entre "Voltar ao Hub" e "Sair"
+
+| Ação | Comportamento | Quando Usar |
+|------|---------------|-------------|
+| **Voltar ao Hub** | Redireciona para `/hub` mantendo sessão SSO ativa | Usuário quer trocar de módulo sem fazer logout |
+| **Sair** | Limpa sessão SSO e redireciona para `/auth` (login) | Usuário quer fazer logout completo |
+
+**Recomendação**: Sempre ofereça ambas as opções quando o usuário veio via SSO (`hasSSOToken === true`).
 
 ## 📊 Resumo Técnico
 
@@ -589,4 +738,3 @@ Se encontrar problemas durante a implementação:
 
 **Última atualização**: 15 de Novembro de 2025  
 **Versão**: 1.0.0
-
