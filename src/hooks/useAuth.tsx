@@ -326,13 +326,15 @@ export const useAuthState = () => {
         metadata: { email: user?.email }
       });
 
-      await supabase.auth.signOut();
-      
-      // Limpar estado local
+      // Limpar estado local ANTES de fazer signOut no Supabase
+      // Isso evita que o AuthGuard redirecione de volta
       setUser(null);
       setSession(null);
       setIsAdmin(false);
       setAdminChecked(false);
+      
+      // Fazer signOut no Supabase
+      await supabase.auth.signOut();
       
       toast({
         title: "Logout realizado",
@@ -340,6 +342,12 @@ export const useAuthState = () => {
       });
     } catch (err) {
       console.error('Error signing out:', err);
+      
+      // Mesmo com erro, limpar estado local
+      setUser(null);
+      setSession(null);
+      setIsAdmin(false);
+      setAdminChecked(false);
       
       // Log de erro no logout
       await securityLogger.log({

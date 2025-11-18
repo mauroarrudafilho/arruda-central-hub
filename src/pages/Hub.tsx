@@ -111,7 +111,7 @@ const formatDateTime = (dateString?: string) => {
 const Hub = () => {
   console.log('🔵 Hub component renderizado');
   const navigate = useNavigate();
-  const { user } = useAuthState();
+  const { user, signOut } = useAuthState();
   const designTokens = useDesignTokens();
   const { isFavoriteProject, toggleFavoriteProject } = useUserPreferences();
   const userId = user?.id ?? null;
@@ -532,8 +532,25 @@ const Hub = () => {
     ? sortedProjects[0].nome
     : null;
 
-  const handleLogout = () => {
-    navigate('/auth', { replace: true });
+  const handleLogout = async () => {
+    try {
+      // Fazer logout no Supabase primeiro
+      await signOut();
+      
+      // Aguardar um pouco para garantir que o estado seja limpo
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Forçar redirecionamento para login após logout
+      // Usar window.location.href para garantir reload completo e limpar estado
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo com erro, forçar redirecionamento para garantir que o usuário saia
+      // Limpar localStorage e sessionStorage também
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/auth';
+    }
   };
 
   return (
