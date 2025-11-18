@@ -23,7 +23,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pgcrypto
+SET search_path = public, extensions
 AS $$
 DECLARE
   _user_id UUID;
@@ -73,8 +73,8 @@ BEGIN
       AND frontend_module = _project_slug
       AND session_token = _session_token;
   ELSE
-    -- Gerar novo token único usando pgcrypto.gen_random_bytes explicitamente
-    _session_token := encode(pgcrypto.gen_random_bytes(32), 'base64');
+    -- Gerar novo token único usando gen_random_bytes do schema extensions (Supabase)
+    _session_token := encode(gen_random_bytes(32), 'base64');
     
     -- Definir expiração (12 horas)
     _expires_at := NOW() + INTERVAL '12 hours';
@@ -130,5 +130,5 @@ END;
 $$;
 
 -- Comentários
-COMMENT ON FUNCTION public.generate_sso_token IS 'Gera token SSO para acesso a módulos externos. Usa pgcrypto.gen_random_bytes para gerar tokens seguros. Token expira em 12 horas.';
+COMMENT ON FUNCTION public.generate_sso_token IS 'Gera token SSO para acesso a módulos externos. Usa gen_random_bytes do schema extensions para gerar tokens seguros. Token expira em 12 horas.';
 
