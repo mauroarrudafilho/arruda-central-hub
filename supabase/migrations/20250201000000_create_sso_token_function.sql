@@ -183,14 +183,14 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Buscar informações do usuário
-  SELECT email, nome INTO _user_email, _user_name
-  FROM rbac_auth_profile
-  WHERE user_id = _session.user_id;
+  -- Buscar informações do usuário (qualificar user_id para evitar ambiguidade)
+  SELECT rap.email, rap.nome INTO _user_email, _user_name
+  FROM rbac_auth_profile rap
+  WHERE rap.user_id = _session.user_id;
 
-  SELECT slug, nome INTO _project_slug, _project_name
-  FROM rbac_projects
-  WHERE id = _session.project_id;
+  SELECT rp.slug, rp.nome INTO _project_slug, _project_name
+  FROM rbac_projects rp
+  WHERE rp.id = _session.project_id;
 
   -- Buscar permissões do usuário
   SELECT COALESCE(
