@@ -261,11 +261,16 @@ const Hub = () => {
     if (!userId) return;
 
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('rbac_auth_profile')
         .select('ultimo_login')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() ao invés de single() para evitar erro se não encontrar
+
+      if (profileError) {
+        console.warn('Erro ao buscar último login:', profileError);
+        // Continuar com valor padrão
+      }
 
       const availableProjects = normalizedProjects.filter((project) => project.isAvailable).length;
 

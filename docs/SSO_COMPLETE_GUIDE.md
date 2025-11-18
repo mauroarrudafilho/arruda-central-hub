@@ -175,6 +175,13 @@ export const useSSO = (): UseSSOReturn => {
         // 5. Limpar token da URL (segurança)
         window.history.replaceState({}, '', window.location.pathname);
         
+        // 6. ⚠️ IMPORTANTE: Redirecionar para a página principal após autenticação
+        // Se estiver na página de login, redirecionar para dashboard/home
+        if (window.location.pathname === '/login' || window.location.pathname === '/auth') {
+          // Ajuste a rota conforme sua aplicação (ex: '/dashboard', '/home', '/app')
+          window.location.href = '/dashboard'; // ou use navigate('/dashboard') com React Router
+        }
+        
       } else {
         // Verificar sessão salva no localStorage
         const savedUser = localStorage.getItem('arruda_sso_user');
@@ -248,10 +255,24 @@ No seu arquivo principal (ex: `src/App.tsx` ou `src/main.tsx`):
 #### Opção A: SSO Obrigatório (redireciona se não tiver SSO)
 
 ```typescript
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSSO } from './hooks/useSSO';
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading, authenticated, hasSSOToken } = useSSO();
+
+  // ⚠️ IMPORTANTE: Redirecionar automaticamente após autenticação SSO
+  useEffect(() => {
+    if (!loading && authenticated && hasSSOToken && user) {
+      // Se está na página de login e foi autenticado via SSO, redirecionar
+      if (location.pathname === '/login' || location.pathname === '/auth') {
+        navigate('/dashboard', { replace: true }); // Ajuste a rota conforme sua aplicação
+      }
+    }
+  }, [loading, authenticated, hasSSOToken, user, location.pathname, navigate]);
 
   if (loading) {
     return (
@@ -285,11 +306,25 @@ export default App;
 #### Opção B: SSO Opcional (permite acesso direto sempre)
 
 ```typescript
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSSO } from './hooks/useSSO';
 import { YourAuthProvider } from './contexts/AuthContext'; // Seu sistema de auth
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user: ssoUser, loading, authenticated: ssoAuthenticated, hasSSOToken } = useSSO();
+
+  // ⚠️ IMPORTANTE: Redirecionar automaticamente após autenticação SSO
+  useEffect(() => {
+    if (!loading && ssoAuthenticated && hasSSOToken && ssoUser) {
+      // Se está na página de login e foi autenticado via SSO, redirecionar
+      if (location.pathname === '/login' || location.pathname === '/auth') {
+        navigate('/dashboard', { replace: true }); // Ajuste a rota conforme sua aplicação
+      }
+    }
+  }, [loading, ssoAuthenticated, hasSSOToken, ssoUser, location.pathname, navigate]);
 
   if (loading) {
     return (

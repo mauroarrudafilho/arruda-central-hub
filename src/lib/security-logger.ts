@@ -69,12 +69,12 @@ export class SecurityLogger {
       const resolvedIp = data.ip_address ?? await this.getClientIP();
       const sanitizedIp = this.sanitizeIp(resolvedIp);
 
-      // Adicionar timestamp e dados do navegador se não fornecidos
+      // Adicionar dados do navegador se não fornecidos
       const logData = {
         ...data,
         ip_address: sanitizedIp ?? undefined,
         user_agent: data.user_agent || (typeof navigator !== 'undefined' ? navigator.userAgent : undefined),
-        created_at: new Date().toISOString(),
+        // REMOVIDO: created_at - será definido pelo DEFAULT da tabela no banco
       };
 
       // Adicionar à fila para processamento em lote
@@ -205,23 +205,55 @@ export class SecurityLogger {
       const logsToProcess = [...this.logQueue];
       this.logQueue = [];
 
+      // Filtrar e preparar logs válidos
+      const validLogs = logsToProcess
+        .map(log => {
+          // Validar campos obrigatórios
+          if (!log.event_type || !log.severity || !log.description) {
+            console.warn('Log ignorado - campos obrigatórios faltando:', log);
+            return null;
+          }
+
+          const insertData: any = {
+            user_id: log.user_id || null,
+            event_type: log.event_type,
+            severity: log.severity,
+            description: log.description,
+            // REMOVIDO: resource_path - não existe na tabela atual
+            // action é NOT NULL, então sempre deve ter um valor
+            action: log.action || log.event_type, // Usar event_type como fallback se action não fornecido
+            success: log.success ?? true,
+            user_agent: log.user_agent || null,
+            metadata: log.metadata || {},
+            error_message: log.error_message || null,
+            // REMOVIDO: created_at - deixar o DEFAULT da tabela fazer
+          };
+
+          // Validar e converter ip_address (tipo INET no banco)
+          if (log.ip_address && log.ip_address.trim()) {
+            const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            if (ipPattern.test(log.ip_address.trim())) {
+              insertData.ip_address = log.ip_address.trim();
+            } else {
+              insertData.ip_address = null;
+            }
+          } else {
+            insertData.ip_address = null;
+          }
+
+          return insertData;
+        })
+        .filter(item => item !== null); // Remover logs inválidos
+
+      // Só inserir se houver logs válidos
+      if (validLogs.length === 0) {
+        return;
+      }
+
       // Inserir logs em lote no Supabase
       const { error } = await supabase
         .from('security_logs')
-        .insert(logsToProcess.map(log => ({
-          user_id: log.user_id,
-          event_type: log.event_type,
-          severity: log.severity,
-          description: log.description,
-          resource_path: log.resource_path,
-          action: log.action,
-          success: log.success,
-          ip_address: log.ip_address ?? null,
-          user_agent: log.user_agent,
-          metadata: log.metadata,
-          error_message: log.error_message,
-          created_at: log.created_at
-        })));
+        .insert(validLogs);
 
       if (error) {
         console.error('Erro ao inserir logs de segurança:', error);
@@ -241,22 +273,42 @@ export class SecurityLogger {
    */
   private async processCriticalLog(logData: SecurityLogData): Promise<void> {
     try {
+      // Validar campos obrigatórios
+      if (!logData.event_type || !logData.severity || !logData.description) {
+        console.warn('Log crítico ignorado - campos obrigatórios faltando:', logData);
+        return;
+      }
+
+      const insertData: any = {
+        user_id: logData.user_id || null,
+        event_type: logData.event_type,
+        severity: logData.severity,
+        description: logData.description,
+        // REMOVIDO: resource_path - não existe na tabela atual
+        // action é NOT NULL, então sempre deve ter um valor
+        action: logData.action || logData.event_type, // Usar event_type como fallback se action não fornecido
+        success: logData.success ?? true,
+        user_agent: logData.user_agent || null,
+        metadata: logData.metadata || {},
+        error_message: logData.error_message || null,
+        // REMOVIDO: created_at - deixar o DEFAULT da tabela fazer
+      };
+
+      // Validar e converter ip_address
+      if (logData.ip_address && logData.ip_address.trim()) {
+        const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        if (ipPattern.test(logData.ip_address.trim())) {
+          insertData.ip_address = logData.ip_address.trim();
+        } else {
+          insertData.ip_address = null;
+        }
+      } else {
+        insertData.ip_address = null;
+      }
+
       const { error } = await supabase
         .from('security_logs')
-        .insert({
-          user_id: logData.user_id,
-          event_type: logData.event_type,
-          severity: logData.severity,
-          description: logData.description,
-          resource_path: logData.resource_path,
-          action: logData.action,
-          success: logData.success,
-          ip_address: logData.ip_address ?? null,
-          user_agent: logData.user_agent,
-          metadata: logData.metadata,
-          error_message: logData.error_message,
-          created_at: logData.created_at
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Erro ao inserir log crítico:', error);
