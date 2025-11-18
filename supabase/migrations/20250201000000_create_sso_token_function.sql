@@ -48,13 +48,13 @@ BEGIN
   -- (Removida verificação de is_admin ou rbac_user_project_access para facilitar)
 
   -- Verificar se já existe sessão ativa para este usuário e módulo
-  SELECT session_token, expires_at INTO _existing_session
-  FROM user_sessions
-  WHERE user_id = _user_id
-    AND frontend_module = _project_slug
-    AND status = 'ativo'
-    AND expires_at > NOW()
-  ORDER BY created_at DESC
+  SELECT us.session_token, us.expires_at INTO _existing_session
+  FROM user_sessions us
+  WHERE us.user_id = _user_id
+    AND us.frontend_module = _project_slug
+    AND us.status = 'ativo'
+    AND us.expires_at > NOW()
+  ORDER BY us.created_at DESC
   LIMIT 1;
 
   IF FOUND AND _existing_session.expires_at > NOW() THEN
