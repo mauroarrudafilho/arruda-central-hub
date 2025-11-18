@@ -147,9 +147,9 @@ export const useProjects = () => {
         setProjects(allData || []);
       } else {
         // Fallback para get_user_projects
-        const { data, error } = await supabase.rpc('get_user_projects');
-        if (error) throw error;
-        setProjects(data || []);
+      const { data, error } = await supabase.rpc('get_user_projects');
+      if (error) throw error;
+      setProjects(data || []);
       }
     } catch (err: any) {
       console.error('Error fetching projects:', err);
