@@ -534,22 +534,34 @@ const Hub = () => {
 
   const handleLogout = async () => {
     try {
-      // Fazer logout no Supabase primeiro
+      // Limpar localStorage e sessionStorage ANTES de fazer signOut
+      // Isso evita que dados persistidos sejam restaurados
+      localStorage.removeItem('arruda_sso_user');
+      localStorage.removeItem('arruda_sso_token');
+      localStorage.removeItem('arruda_sso_expires');
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Fazer logout no Supabase
       await signOut();
       
       // Aguardar um pouco para garantir que o estado seja limpo
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Limpar novamente após signOut para garantir
+      localStorage.clear();
+      sessionStorage.clear();
       
       // Forçar redirecionamento para login após logout
-      // Usar window.location.href para garantir reload completo e limpar estado
-      window.location.href = '/auth';
+      // Usar window.location.replace para evitar que o usuário volte com o botão voltar
+      window.location.replace('/auth');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       // Mesmo com erro, forçar redirecionamento para garantir que o usuário saia
       // Limpar localStorage e sessionStorage também
       localStorage.clear();
       sessionStorage.clear();
-      window.location.href = '/auth';
+      window.location.replace('/auth');
     }
   };
 

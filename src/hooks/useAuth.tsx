@@ -326,6 +326,14 @@ export const useAuthState = () => {
         metadata: { email: user?.email }
       });
 
+      // Limpar localStorage e sessionStorage ANTES de fazer signOut
+      // Isso evita que dados persistidos sejam restaurados
+      localStorage.removeItem('arruda_sso_user');
+      localStorage.removeItem('arruda_sso_token');
+      localStorage.removeItem('arruda_sso_expires');
+      localStorage.clear();
+      sessionStorage.clear();
+
       // Limpar estado local ANTES de fazer signOut no Supabase
       // Isso evita que o AuthGuard redirecione de volta
       setUser(null);
@@ -333,8 +341,13 @@ export const useAuthState = () => {
       setIsAdmin(false);
       setAdminChecked(false);
       
-      // Fazer signOut no Supabase
-      await supabase.auth.signOut();
+      // Fazer signOut no Supabase com scope 'local' para limpar apenas sessão local
+      // e 'global' para limpar todas as sessões em todos os dispositivos
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Limpar novamente após signOut para garantir
+      localStorage.clear();
+      sessionStorage.clear();
       
       toast({
         title: "Logout realizado",
@@ -343,11 +356,13 @@ export const useAuthState = () => {
     } catch (err) {
       console.error('Error signing out:', err);
       
-      // Mesmo com erro, limpar estado local
+      // Mesmo com erro, limpar estado local e storage
       setUser(null);
       setSession(null);
       setIsAdmin(false);
       setAdminChecked(false);
+      localStorage.clear();
+      sessionStorage.clear();
       
       // Log de erro no logout
       await securityLogger.log({
