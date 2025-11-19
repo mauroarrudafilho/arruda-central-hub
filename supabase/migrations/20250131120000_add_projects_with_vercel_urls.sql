@@ -22,7 +22,7 @@ COMMENT ON COLUMN public.rbac_projects.icone IS 'Nome do ícone do projeto (luci
 INSERT INTO public.rbac_projects (nome, descricao, slug, status, url_vercel, icone)
 VALUES
   ('Acordos Comerciais', 'Gestão de acordos comerciais e contratos', 'acordos', 'ativo', 'https://acordo-flow.vercel.app', 'FileText'),
-  ('Comercial+', 'Gestão comercial avançada e vendas', 'comercial-plus', 'ativo', 'https://arruda-sales-boost.vercel.app/auth', 'Building2'),
+  ('Comercial+', 'Gestão comercial avançada e vendas', 'comercial-plus', 'ativo', 'https://arruda-sales-boost.vercel.app', 'Building2'),
   ('Trade Marketing', 'Campanhas e promoções comerciais', 'trade-marketing', 'ativo', 'https://degusta-go.vercel.app/', 'BarChart3'),
   ('Financeiro', 'Controle financeiro e contabilidade', 'financeiro', 'ativo', 'https://arruda-flow-buddy.vercel.app/', 'DollarSign'),
   ('Meus Produtos', 'Repositório central de informações de produtos', 'meus-produtos', 'ativo', 'https://arruda-catalog-maker.vercel.app/', 'Package'),
