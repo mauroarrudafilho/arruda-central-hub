@@ -326,7 +326,7 @@ SELECT
 FROM public.projects p
 CROSS JOIN (VALUES
   ('rbac', 'Sistema RBAC', 'http://localhost:8083', 'ativo'),
-  ('acordos', 'Acordos Comerciais', 'https://acordo-flow.lovable.app', 'ativo'),
+  ('acordos', 'Acordos Comerciais', 'https://acordo-flow.vercel.app', 'ativo'),
   ('degustacao', 'Degustação & Trade', 'https://degusta-go.lovable.app', 'ativo')
 ) AS modulo(name, display_name, url, status)
 WHERE p.slug = 'gestao'
