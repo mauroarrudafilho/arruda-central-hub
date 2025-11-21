@@ -19,8 +19,8 @@
 ### **Estrutura de Micro-frontends:**
 ```
 RBAC Manager (Hub Central)
-├── Módulo Acordos (https://acordo-flow.lovable.app)
-├── Módulo Degustação (https://degusta-go.lovable.app)
+├── Módulo Acordos (https://acordo-flow.vercel.app)
+├── Módulo Degustação (https://degusta-go.vercel.app)
 └── Outros módulos futuros...
 ```
 

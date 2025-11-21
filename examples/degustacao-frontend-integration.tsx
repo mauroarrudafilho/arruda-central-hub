@@ -15,7 +15,7 @@ const authConfig = {
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnenlicGVsbHVmdGV4cmV3eWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODA4NzUsImV4cCI6MjA3MDg1Njg3NX0.tQGH9z4Sp0I23vETIrqwRvSRUGSOru1e4r5GOKgzbsI',
   projectId: 'uuid-do-projeto-gestao', // ID do projeto no banco - buscar com: SELECT id FROM projects WHERE slug = 'gestao'
   moduleName: 'degustacao',
-  frontendOrigin: 'https://degusta-go.lovable.app',
+  frontendOrigin: 'https://degusta-go.vercel.app',
   enableLogging: true,
 };
 
