@@ -12,10 +12,12 @@ O Arruda Central Hub já está **perfeito** e funcionando. Ele:
 - ✅ Redireciona para o módulo externo com o token
 
 **O que VOCÊ precisa fazer** é implementar o código que:
-1. Pega o token da URL
-2. Valida o token com o Supabase
-3. Salva no localStorage
-4. **IMPORTANTE**: Envia o token automaticamente em TODAS as requisições ao Supabase
+1. Pega o token da URL (com decodificação e múltiplos nomes de parâmetro)
+2. Valida o token com o Supabase (usando `_token` como parâmetro)
+3. Salva no localStorage (`arruda_sso_user`, `arruda_sso_token`, `arruda_sso_expires`)
+4. **CRÍTICO**: Configura cliente Supabase para desabilitar Auth quando SSO está ativo
+5. **CRÍTICO**: Implementa interceptor que envia token em TODAS as requisições
+6. Limpa o token da URL após processar (segurança)
 
 ---
 
@@ -34,6 +36,22 @@ const SUPABASE_URL = 'https://kgzybpelluftexrewyke.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnenlicGVsbHVmdGV4cmV3eWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODA4NzUsImV4cCI6MjA3MDg1Njg3NX0.tQGH9z4Sp0I23vETIrqwRvSRUGSOru1e4r5GOKgzbsI';
 
 /**
+ * Verifica se há SSO ativo (do localStorage ou URL)
+ */
+const hasSSOUser = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('arruda_sso_user') || !!localStorage.getItem('arruda_sso_token');
+};
+
+const checkSSOInURL = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const urlParams = new URLSearchParams(window.location.search);
+  return !!(urlParams.get('sso_token') || urlParams.get('token') || urlParams.get('ssoToken'));
+};
+
+const isSSOActive = hasSSOUser() || checkSSOInURL();
+
+/**
  * Obtém token SSO do localStorage
  */
 const getSSOToken = (): string | null => {
@@ -45,13 +63,15 @@ const getSSOToken = (): string | null => {
  * Cliente Supabase configurado para enviar token SSO automaticamente
  * ⚠️ CRÍTICO: Este interceptor adiciona o token em TODAS as requisições
  */
+
 export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   global: {
     headers: {},
   },
   auth: {
-    persistSession: false, // Não usar sessão Supabase Auth quando usando SSO
-    autoRefreshToken: false,
+    persistSession: !isSSOActive, // ⚠️ Não persistir sessão quando SSO está ativo
+    autoRefreshToken: !isSSOActive, // ⚠️ Desabilitar refresh token quando SSO está ativo
+    detectSessionInUrl: !isSSOActive, // ⚠️ Não detectar sessão na URL quando SSO está ativo
   },
 });
 
@@ -73,9 +93,11 @@ supabase.rest.fetch = async (url, options = {}) => {
 ```
 
 **Por que isso é crítico?**
-- Sem o interceptor, o token fica no localStorage mas não é enviado nas requisições
-- As funções RPC do Supabase precisam receber o token no header `x-sso-token`
-- Sem o header, você verá erros como "User not authenticated"
+- ✅ **SEM este interceptor, o token fica no localStorage mas NÃO é enviado nas requisições**
+- ✅ **As funções RPC precisam receber o token no header `x-sso-token`**
+- ✅ **Sem o header, você verá erros como "User not authenticated"**
+- ✅ **O interceptor intercepta TODAS as requisições (RPC, queries, etc.)**
+- ✅ **Adiciona o header `x-sso-token` automaticamente**
 
 ---
 
@@ -131,17 +153,28 @@ export const useSSO = (): UseSSOReturn => {
       setLoading(true);
       setError(null);
 
-      // 1. Verificar token na URL
+      // 1. Verificar token na URL (aceita múltiplos nomes de parâmetro)
       const urlParams = new URLSearchParams(window.location.search);
-      const ssoToken = urlParams.get('sso_token');
+      const ssoTokenRaw = urlParams.get('sso_token') || urlParams.get('token') || urlParams.get('ssoToken');
       const fromHub = urlParams.get('from') === 'arruda-hub';
+
+      // Decodificar token (importante para caracteres especiais como +)
+      let ssoToken = null;
+      if (ssoTokenRaw) {
+        try {
+          ssoToken = decodeURIComponent(ssoTokenRaw).trim();
+        } catch (e) {
+          ssoToken = ssoTokenRaw.trim();
+        }
+      }
 
       if (ssoToken && fromHub) {
         console.log('🔑 Token SSO encontrado na URL, validando...');
         
         // 2. Validar token SSO (usando o cliente com interceptor)
+        // ⚠️ IMPORTANTE: usar _token, não p_token
         const { data, error: validationError } = await supabase.rpc('validate_sso_token', {
-          _token: ssoToken,
+          _token: ssoToken.trim(), // ⚠️ Sempre usar .trim() para remover espaços
         });
 
         if (validationError || !data || !data.length || !data[0].is_valid) {
@@ -190,7 +223,7 @@ export const useSSO = (): UseSSOReturn => {
           if (expiresAt > new Date()) {
             // Validar token novamente
             const { data: validationData, error: validationError } = await supabase.rpc('validate_sso_token', {
-              _token: savedToken,
+              _token: savedToken.trim(), // ⚠️ Sempre usar .trim()
             });
 
             if (!validationError && validationData && validationData.length > 0 && validationData[0].is_valid) {
@@ -315,11 +348,36 @@ Para mais detalhes, veja:
 
 ---
 
+## ⚠️ Pontos Críticos (Não Pule Estes!)
+
+### 1. Decodificação do Token é OBRIGATÓRIA
+**Por quê:** Tokens podem ter caracteres especiais (ex: `+` vira espaço)  
+**Solução:** Sempre usar `decodeURIComponent()` e `.trim()`
+
+### 2. Aceitar Múltiplos Nomes de Parâmetro
+**Por quê:** Compatibilidade com diferentes implementações  
+**Solução:** Verificar `sso_token`, `token`, `ssoToken`
+
+### 3. Parâmetro Correto na Função RPC
+**Por quê:** A função espera `_token`, não `p_token`  
+**Solução:** Sempre usar `_token: ssoToken.trim()`
+
+### 4. Configuração do Cliente Supabase
+**Por quê:** Evita conflitos entre Supabase Auth e SSO  
+**Solução:** Desabilitar `persistSession`, `autoRefreshToken`, `detectSessionInUrl` quando SSO está ativo
+
+### 5. Interceptor é OBRIGATÓRIO
+**Por quê:** Sem ele, o token não é enviado e nada funciona  
+**Solução:** Implementar interceptor em `src/lib/supabase.ts`
+
+---
+
 ## 🆘 Problemas Comuns
 
 ### "User not authenticated" em funções RPC
 **Causa**: Token não está sendo enviado no header  
-**Solução**: Verificar se o interceptor está funcionando (Network tab)
+**Solução**: Verificar se o interceptor está funcionando (Network tab)  
+**Verificação**: Abra DevTools > Network > Requisição RPC > Headers > Deve ter `x-sso-token`
 
 ### Token válido mas autenticação não persiste
 **Causa**: Cliente Supabase não está configurado globalmente  
@@ -329,9 +387,48 @@ Para mais detalhes, veja:
 **Causa**: Sem verificação de expiração  
 **Solução**: O hook já faz isso automaticamente, verificar se está sendo usado
 
+### Erro 400 na função RPC
+**Causa**: Função não consegue ler o header ou token inválido  
+**Solução**: Verificar tratamento de erros na função RPC e se o token está sendo enviado
+
+### Token não é encontrado na URL
+**Causa**: Token pode estar codificado ou com nome diferente  
+**Solução**: Usar `decodeURIComponent()` e verificar múltiplos nomes (`sso_token`, `token`, `ssoToken`)
+
 ---
 
-**Última atualização**: 05 de Fevereiro de 2025  
-**Versão**: 2.0.0  
-**Status**: Pronto para Implementação ✅
+---
+
+## 📝 Resumo das Melhorias Críticas (Baseado em Módulo Funcional)
+
+### ✅ Melhorias Implementadas
+
+1. **Decodificação de Token**
+   - Usa `decodeURIComponent()` para tratar caracteres especiais
+   - Aceita múltiplos nomes de parâmetro: `sso_token`, `token`, `ssoToken`
+   - Remove espaços com `.trim()`
+
+2. **Configuração do Cliente Supabase**
+   - Verifica se SSO está ativo antes de configurar
+   - Desabilita `persistSession`, `autoRefreshToken`, `detectSessionInUrl` quando SSO ativo
+   - Evita conflitos entre Supabase Auth e SSO
+
+3. **Validação do Token**
+   - Sempre usa `.trim()` no token antes de validar
+   - Usa parâmetro correto: `_token` (não `p_token`)
+
+4. **Limpeza de URL**
+   - Remove token da URL após processar (segurança)
+   - Usa `window.history.replaceState()`
+
+5. **Interceptor Melhorado**
+   - Documentação mais clara sobre por que é crítico
+   - Exemplos de verificação no Network tab
+
+---
+
+**Última atualização**: 21 de Novembro de 2025  
+**Versão**: 2.1.0 (Baseado em implementação funcional do Arruda Catalog Maker)  
+**Status**: Pronto para Implementação ✅  
+**Testado em**: Arruda Catalog Maker (100% funcional)
 
