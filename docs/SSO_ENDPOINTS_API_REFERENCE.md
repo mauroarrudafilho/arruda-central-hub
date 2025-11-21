@@ -2,7 +2,7 @@
 ## Arruda Central Hub - Referência Técnica de Integração
 
 **Versão:** 1.1.0  
-**Data:** 05 de Fevereiro de 2025  
+**Data:** 21 de Novembro de 2025  
 **Status:** Produção
 
 ---
@@ -800,7 +800,7 @@ const { data, error } = await supabase.rpc('generate_sso_token', {
 
 ## 📝 Changelog
 
-### Versão 1.1.0 (05/02/2025)
+### Versão 1.1.0 (21/11/2025)
 - Atualizada lista de projetos e slugs
 - Slugs atualizados para corresponder aos nomes dos projetos no Vercel
 - Adicionada seção de referência de projetos cadastrados
@@ -813,7 +813,7 @@ const { data, error } = await supabase.rpc('generate_sso_token', {
 
 ---
 
-**Última atualização:** 05 de Fevereiro de 2025  
+**Última atualização:** 21 de Novembro de 2025  
 **Mantido por:** Equipe Arruda Central Hub  
 **Status:** Produção ✅
 
