@@ -395,8 +395,11 @@ const Hub = () => {
 
           if (!tokenError && tokenData && tokenData.length > 0) {
             ssoToken = tokenData[0].token;
+            // Garantir que os parâmetros SSO sejam sempre adicionados, mesmo se já existirem na URL
             url.searchParams.set('sso_token', ssoToken);
             url.searchParams.set('from', 'arruda-hub');
+            // Adicionar timestamp para evitar cache
+            url.searchParams.set('_t', Date.now().toString());
             console.log('✅ Token SSO gerado e adicionado à URL:', {
               project: project.nome,
               url: url.toString(),

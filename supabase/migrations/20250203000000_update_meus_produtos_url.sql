@@ -9,3 +9,4 @@ SET
   updated_at = now()
 WHERE slug = 'meus-produtos';
 
+
