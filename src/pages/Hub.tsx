@@ -463,8 +463,24 @@ const Hub = () => {
       
       // Redirecionar diretamente para o módulo externo com token SSO na URL
       // O módulo externo deve validar o token usando validate_sso_token
-      console.log('🔵 Abrindo URL com SSO:', url.toString());
-      window.open(url.toString(), '_blank', 'noopener,noreferrer');
+      const finalUrl = url.toString();
+      console.log('🔵 Abrindo URL com SSO:', finalUrl);
+      console.log('🔵 Parâmetros da URL:', {
+        sso_token: url.searchParams.get('sso_token') ? 'presente' : 'ausente',
+        from: url.searchParams.get('from'),
+        _t: url.searchParams.get('_t'),
+        fullUrl: finalUrl
+      });
+      
+      // Tentar abrir em nova aba primeiro, se falhar usar window.location.href
+      // window.open pode ser bloqueado por popup blockers, então temos fallback
+      const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      
+      // Se window.open foi bloqueado ou falhou, redirecionar na mesma aba
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        console.warn('⚠️ window.open foi bloqueado, redirecionando na mesma aba');
+        window.location.href = finalUrl;
+      }
     } else {
       if (user) {
         try {
