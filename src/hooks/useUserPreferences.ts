@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from './use-toast';
 
 interface UserPreferences {
@@ -31,7 +31,7 @@ const defaultPreferences: UserPreferences = {
 };
 
 export const useUserPreferences = (): UseUserPreferencesReturn => {
-  const { user } = useAuthState();
+  const { user } = useAuth();
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

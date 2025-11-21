@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface ProjectDetailedStats {
   projectId: string;
@@ -13,7 +13,7 @@ export interface ProjectDetailedStats {
 }
 
 export const useProjectDetailedStats = (projectIds: string[]) => {
-  const { user } = useAuthState();
+  const { user } = useAuth();
   const [stats, setStats] = useState<Map<string, ProjectDetailedStats>>(new Map());
   const [loading, setLoading] = useState(true);
 

@@ -1,4 +1,4 @@
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useLocation } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
@@ -8,7 +8,7 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
-  const { user, loading, isAdmin, adminChecked } = useAuthState();
+  const { user, loading, isAdmin, adminChecked } = useAuth();
   const location = useLocation();
 
   // Se ainda está carregando, mostrar spinner

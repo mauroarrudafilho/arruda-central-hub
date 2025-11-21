@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -31,21 +31,47 @@ export const useAuthState = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  
+  // Refs para controle de estado entre renderizações
+  const sessionHandledRef = useRef(false);
+  const adminCheckCacheRef = useRef<{ userId: string; isAdmin: boolean; timestamp: number } | null>(null);
+  const ADMIN_CACHE_TTL = 60000; // 1 minuto
 
   useEffect(() => {
     let isMounted = true;
 
     const verifyAdminStatus = async (userId: string) => {
       if (!isMounted) return;
+      
+      // Verificar cache
+      const cached = adminCheckCacheRef.current;
+      if (cached && cached.userId === userId && Date.now() - cached.timestamp < ADMIN_CACHE_TTL) {
+        console.log('[useAuth] Usando cache de admin para usuário:', userId);
+        if (isMounted) {
+          setIsAdmin(cached.isAdmin);
+          setAdminChecked(true);
+        }
+        return;
+      }
+
       setAdminChecked(false);
 
       try {
         const { data, error } = await supabase.rpc('user_is_admin', { user_id: userId });
 
         if (!error) {
-          console.log('[useAuth] isAdmin state set to:', data);
+          const adminStatus = Boolean(data);
+          console.log('[useAuth] isAdmin state set to:', adminStatus);
+          
+          // Atualizar cache
+          adminCheckCacheRef.current = {
+            userId,
+            isAdmin: adminStatus,
+            timestamp: Date.now()
+          };
+          
           if (isMounted) {
-            setIsAdmin(Boolean(data));
+            setIsAdmin(adminStatus);
           }
           return;
         }
@@ -59,8 +85,17 @@ export const useAuthState = () => {
           .eq('ativo', true)
           .maybeSingle();
 
+        const adminStatus = roleData?.rbac_auth_role?.nome === 'admin';
+        
+        // Atualizar cache
+        adminCheckCacheRef.current = {
+          userId,
+          isAdmin: adminStatus,
+          timestamp: Date.now()
+        };
+        
         if (isMounted) {
-          setIsAdmin(roleData?.rbac_auth_role?.nome === 'admin');
+          setIsAdmin(adminStatus);
         }
       } catch (err) {
         console.error('Error checking admin status:', err);
@@ -97,6 +132,8 @@ export const useAuthState = () => {
       } else {
         setIsAdmin(false);
         setAdminChecked(true);
+        // Limpar cache quando não há sessão
+        adminCheckCacheRef.current = null;
       }
 
       if (isMounted) {
@@ -107,15 +144,19 @@ export const useAuthState = () => {
 
     console.log('[useAuth] Configurando listener de mudanças de autenticação');
     
-    let sessionHandled = false;
-    
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[useAuth] Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
-      if (!sessionHandled || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      
+      // Resetar sessionHandled para eventos importantes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        sessionHandledRef.current = false;
+      }
+      
+      if (!sessionHandledRef.current || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         console.log('[useAuth] Processando sessão do evento:', event);
-        sessionHandled = true;
+        sessionHandledRef.current = true;
         try {
           await handleSession(session);
         } catch (err) {
@@ -130,7 +171,7 @@ export const useAuthState = () => {
 
     // Timeout de segurança: se demorar mais de 3 segundos sem resposta do listener, tentar getSession
     const timeoutId = setTimeout(() => {
-      if (isMounted && !sessionHandled) {
+      if (isMounted && !sessionHandledRef.current) {
         console.warn('[useAuth] Listener não respondeu em 3s, tentando getSession()...');
         
         supabase.auth
@@ -140,8 +181,8 @@ export const useAuthState = () => {
             
             if (error) {
               console.error('[useAuth] Erro ao obter sessão:', error);
-              if (!sessionHandled) {
-                sessionHandled = true;
+              if (!sessionHandledRef.current) {
+                sessionHandledRef.current = true;
                 setLoading(false);
                 setAdminChecked(true);
                 setIsAdmin(false);
@@ -151,16 +192,16 @@ export const useAuthState = () => {
               return;
             }
             
-            if (!sessionHandled) {
+            if (!sessionHandledRef.current) {
               console.log('[useAuth] Sessão obtida via getSession():', session ? 'sessão válida' : 'sem sessão');
-              sessionHandled = true;
+              sessionHandledRef.current = true;
               await handleSession(session);
             }
           })
           .catch((err) => {
             console.error('[useAuth] Erro ao obter sessão (catch):', err);
-            if (!sessionHandled && isMounted) {
-              sessionHandled = true;
+            if (!sessionHandledRef.current && isMounted) {
+              sessionHandledRef.current = true;
               setLoading(false);
               setAdminChecked(true);
               setIsAdmin(false);

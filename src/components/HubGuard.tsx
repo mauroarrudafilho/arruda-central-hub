@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Building2, 
   ExternalLink, 
@@ -17,7 +17,7 @@ interface HubGuardProps {
 }
 
 export const HubGuard = ({ children }: HubGuardProps) => {
-  const { user, loading: authLoading } = useAuthState();
+  const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [checkingAccess, setCheckingAccess] = useState(true);

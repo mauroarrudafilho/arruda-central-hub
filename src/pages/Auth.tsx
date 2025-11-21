@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 import { useToast } from '@/hooks/use-toast';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const Auth = () => {
@@ -21,7 +21,7 @@ const Auth = () => {
   const [keepConnected, setKeepConnected] = useState(false);
 
   const { toast } = useToast();
-  const { signIn, signUp, resendConfirmation, user } = useAuthState();
+  const { signIn, signUp, resendConfirmation, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   

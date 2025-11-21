@@ -16,14 +16,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useProjects, useProjectModules } from '@/hooks/useProjects';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useProjectContext } from '@/contexts/ProjectContext';
 
 function AppSidebar() {
   const { state } = useSidebar();
-  const { signOut, user } = useAuthState();
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { projects, loading: projectsLoading } = useProjects();
   const { currentProject, setCurrentProject, setProjects } = useProjectContext();

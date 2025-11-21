@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthState } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useDesignTokens } from '@/hooks/useDesignTokens';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
@@ -153,7 +153,7 @@ const useCountdown = (targetDate: string | null) => {
 
 const Hub = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuthState();
+  const { user, signOut } = useAuth();
   const designTokens = useDesignTokens();
   const { isFavoriteProject, toggleFavoriteProject } = useUserPreferences();
   const userId = user?.id ?? null;

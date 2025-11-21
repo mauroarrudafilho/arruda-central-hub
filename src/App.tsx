@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ConfirmEmail from "./pages/ConfirmEmail";
 import { AuthGuard } from "./components/AuthGuard";
 import { ProjectProvider } from "./contexts/ProjectContext";
+import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -22,34 +23,36 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ProjectProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/confirm-email" element={<ConfirmEmail />} />
-            <Route path="/hub" element={
-              <AuthGuard>
-                <Hub />
-              </AuthGuard>
-            } />
-            <Route path="/redirect" element={
-              <AuthGuard>
-                <Redirect />
-              </AuthGuard>
-            } />
-            <Route path="/sso-redirect" element={<SSORedirect />} />
-            <Route path="/profile" element={
-              <AuthGuard>
-                <Profile />
-              </AuthGuard>
-            } />
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ProjectProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/confirm-email" element={<ConfirmEmail />} />
+              <Route path="/hub" element={
+                <AuthGuard>
+                  <Hub />
+                </AuthGuard>
+              } />
+              <Route path="/redirect" element={
+                <AuthGuard>
+                  <Redirect />
+                </AuthGuard>
+              } />
+              <Route path="/sso-redirect" element={<SSORedirect />} />
+              <Route path="/profile" element={
+                <AuthGuard>
+                  <Profile />
+                </AuthGuard>
+              } />
+              <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ProjectProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
