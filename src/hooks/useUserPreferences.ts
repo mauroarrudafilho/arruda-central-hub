@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthState } from '@/hooks/useAuth';
 import { toast } from './use-toast';
@@ -159,13 +159,13 @@ export const useUserPreferences = (): UseUserPreferencesReturn => {
     }
   };
 
-  const isFavorite = (moduleId: string): boolean => {
+  const isFavorite = useCallback((moduleId: string): boolean => {
     return preferences.favorite_modules.includes(moduleId);
-  };
+  }, [preferences.favorite_modules]);
 
-  const isFavoriteProject = (projectId: string): boolean => {
+  const isFavoriteProject = useCallback((projectId: string): boolean => {
     return preferences.favorite_projects.includes(projectId);
-  };
+  }, [preferences.favorite_projects]);
 
   useEffect(() => {
     loadPreferences();

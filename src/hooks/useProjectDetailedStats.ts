@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthState } from '@/hooks/useAuth';
 
@@ -16,6 +16,9 @@ export const useProjectDetailedStats = (projectIds: string[]) => {
   const { user } = useAuthState();
   const [stats, setStats] = useState<Map<string, ProjectDetailedStats>>(new Map());
   const [loading, setLoading] = useState(true);
+
+  // Memoizar a string de IDs para evitar re-renderizações desnecessárias
+  const projectIdsKey = useMemo(() => projectIds.sort().join(','), [projectIds]);
 
   useEffect(() => {
     if (projectIds.length === 0 || !user) {
@@ -93,7 +96,7 @@ export const useProjectDetailedStats = (projectIds: string[]) => {
     };
 
     fetchStats();
-  }, [projectIds.join(','), user?.id]);
+  }, [projectIdsKey, user?.id, projectIds]);
 
   const getProjectStats = (projectId: string): ProjectDetailedStats | null => {
     return stats.get(projectId) || null;

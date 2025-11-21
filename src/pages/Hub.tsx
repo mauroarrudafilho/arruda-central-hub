@@ -109,7 +109,6 @@ const formatDateTime = (dateString?: string) => {
 };
 
 const Hub = () => {
-  console.log('🔵 Hub component renderizado');
   const navigate = useNavigate();
   const { user, signOut } = useAuthState();
   const designTokens = useDesignTokens();
@@ -119,8 +118,6 @@ const Hub = () => {
   const { projects, loading: projectsLoading } = useProjects();
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
   const { getProjectStats, loading: statsLoading } = useProjectDetailedStats(projectIds);
-  
-  console.log('🔵 Hub - user:', user?.id, 'projects count:', projects?.length);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -257,6 +254,12 @@ const Hub = () => {
     });
   }, [filteredProjects]);
 
+  // Memoizar o número de projetos disponíveis para evitar loops
+  const availableProjectsCount = useMemo(
+    () => normalizedProjects.filter((project) => project.isAvailable).length,
+    [normalizedProjects]
+  );
+
   const loadUserStats = useCallback(async () => {
     if (!userId) return;
 
@@ -272,17 +275,15 @@ const Hub = () => {
         // Continuar com valor padrão
       }
 
-      const availableProjects = normalizedProjects.filter((project) => project.isAvailable).length;
-
       setUserStats({
-        totalProjects: availableProjects,
+        totalProjects: availableProjectsCount,
         lastLogin: profile?.ultimo_login || new Date().toISOString(),
         sessionExpires: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  }, [userId, normalizedProjects]);
+  }, [userId, availableProjectsCount]);
 
   useEffect(() => {
     loadUserStats();
