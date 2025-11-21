@@ -1,8 +1,8 @@
 # 📡 Documento Oficial - API de Endpoints SSO
 ## Arruda Central Hub - Referência Técnica de Integração
 
-**Versão:** 1.0.0  
-**Data:** 15 de Novembro de 2025  
+**Versão:** 1.1.0  
+**Data:** 05 de Fevereiro de 2025  
 **Status:** Produção
 
 ---
@@ -158,7 +158,7 @@ const { data, error } = await supabase.rpc('validate_sso_token', {
       user_email: "usuario@exemplo.com",
       user_name: "João Silva",
       project_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      project_slug: "acordos-comerciais",
+      project_slug: "acordo-flow",
       project_name: "Acordos Comerciais",
       expires_at: "2025-11-15T23:59:59.000Z",
       permissions: [
@@ -237,7 +237,7 @@ interface ValidateSSOTokenResponse {
   user_email: string | null;        // Email do usuário
   user_name: string | null;         // Nome completo do usuário
   project_id: string | null;        // UUID do projeto
-  project_slug: string | null;      // Slug do projeto (ex: "acordos-comerciais")
+  project_slug: string | null;      // Slug do projeto (ex: "acordo-flow")
   project_name: string | null;      // Nome do projeto (ex: "Acordos Comerciais")
   expires_at: string | null;        // ISO 8601 timestamp de expiração
   permissions: Permission[];        // Array de permissões (vazio se inválido)
