@@ -7,5 +7,6 @@ export * from './components/ProtectedRoute';
 export * from './components/PermissionGate';
 export * from './components/FrontendGuard';
 export * from './components/SoftFrontendGuard';
+export * from './supabase/createSSOClient';
 export * from './types';
 export * from './utils/logger';

@@ -469,16 +469,35 @@ const Hub = () => {
               errorMessage: tokenError?.message,
               errorCode: tokenError?.code,
               errorDetails: tokenError?.details,
+              errorHint: tokenError?.hint,
               hasData: !!tokenData,
               dataLength: tokenData?.length,
+              projectSlug: project.slug,
+              userId: user?.id,
             });
             
+            // Tratamento específico para erros comuns
+            let errorMessage = 'Token SSO não pôde ser gerado. Você pode precisar fazer login no módulo.';
+            
+            if (tokenError?.code === 'PGRST116') {
+              errorMessage = `Projeto "${project.nome}" não encontrado. Verifique se o slug "${project.slug}" está correto.`;
+            } else if (tokenError?.message?.includes('não autenticado')) {
+              errorMessage = 'Sua sessão expirou. Por favor, faça login novamente.';
+            } else if (tokenError?.message?.includes('não encontrado')) {
+              errorMessage = `Projeto "${project.nome}" não encontrado no sistema.`;
+            } else if (tokenError?.message) {
+              errorMessage = `Erro ao gerar token: ${tokenError.message}`;
+            }
+            
             toast({
-              title: 'Aviso',
-              description: 'Token SSO não pôde ser gerado. Você pode precisar fazer login no módulo.',
-              variant: 'default',
-              duration: 3000,
+              title: 'Erro ao gerar token SSO',
+              description: errorMessage,
+              variant: 'destructive',
+              duration: 5000,
             });
+            
+            // Continuar mesmo sem token - o módulo pode pedir login
+            console.warn('⚠️ Continuando sem token SSO - o módulo pode solicitar autenticação manual');
           }
         } catch (tokenErr) {
           console.error('❌ Erro ao gerar token SSO:', tokenErr);
@@ -522,42 +541,91 @@ const Hub = () => {
         fullUrl: finalUrl
       });
       
-      // Sempre tentar abrir em nova aba - NUNCA redirecionar a página do Hub
-      // Se popup blocker bloquear, mostrar aviso ao usuário
-      const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      // Estratégia para evitar popup blocker:
+      // 1. Criar um link temporário e clicar programaticamente (mais confiável)
+      // 2. Se falhar, tentar window.open
+      // 3. Se ambos falharem, copiar para clipboard
       
-      // Verificar se window.open foi bloqueado por popup blocker
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        console.warn('⚠️ window.open foi bloqueado por popup blocker');
+      try {
+        // Método 1: Criar link e clicar (funciona melhor com popup blockers)
+        const link = document.createElement('a');
+        link.href = finalUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Triggerar o clique programaticamente
+        link.click();
+        
+        // Remover o link após um delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+        
+        console.log('✅ Link aberto via método de clique programático');
+        
         toast({
-          title: 'Popup bloqueado',
-          description: `Por favor, permita popups para este site ou abra manualmente: ${project.nome}. O link será copiado para a área de transferência.`,
-          variant: 'default',
-          duration: 5000,
+          title: 'Abrindo em nova aba',
+          description: `${project.nome} está sendo aberto em uma nova aba.`,
+          duration: 2000,
         });
+      } catch (linkError) {
+        console.warn('⚠️ Método de link falhou, tentando window.open:', linkError);
         
-        // Tentar copiar link automaticamente
-        navigator.clipboard.writeText(finalUrl).then(() => {
+        // Método 2: Tentar window.open
+        const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+        
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          console.warn('⚠️ window.open foi bloqueado por popup blocker');
+          
+          // Método 3: Copiar para clipboard e mostrar instruções
           toast({
-            title: 'Link copiado!',
-            description: 'O link foi copiado para a área de transferência. Cole na barra de endereços.',
-            duration: 3000,
+            title: 'Popup bloqueado',
+            description: `Por favor, permita popups para este site ou clique no link copiado.`,
+            variant: 'default',
+            duration: 5000,
           });
-        }).catch(() => {
-          // Se falhar, mostrar o link em prompt
-          prompt('Copie este link:', finalUrl);
-        });
+          
+          // Tentar copiar link automaticamente
+          navigator.clipboard.writeText(finalUrl).then(() => {
+            toast({
+              title: 'Link copiado!',
+              description: `Link de ${project.nome} foi copiado para a área de transferência. Cole na barra de endereços.`,
+              duration: 5000,
+            });
+            
+            // Tentar abrir novamente após copiar (usuário pode permitir popup)
+            setTimeout(() => {
+              const retryWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+              if (retryWindow) {
+                toast({
+                  title: 'Abrindo em nova aba',
+                  description: `${project.nome} está sendo aberto em uma nova aba.`,
+                  duration: 2000,
+                });
+              }
+            }, 1000);
+          }).catch(() => {
+            // Se falhar clipboard, mostrar o link em prompt
+            const shouldOpen = confirm(
+              `Popup bloqueado.\n\nLink: ${finalUrl}\n\nDeseja abrir o link agora?`
+            );
+            if (shouldOpen) {
+              window.location.href = finalUrl; // Última tentativa - redirecionar apenas se usuário confirmar
+            }
+          });
+          
+          return;
+        }
         
-        // NÃO redirecionar - manter o usuário no Hub
-        return;
+        // Se window.open funcionou
+        toast({
+          title: 'Abrindo em nova aba',
+          description: `${project.nome} está sendo aberto em uma nova aba.`,
+          duration: 2000,
+        });
       }
-      
-      // Se abriu com sucesso, mostrar feedback positivo
-      toast({
-        title: 'Abrindo em nova aba',
-        description: `${project.nome} está sendo aberto em uma nova aba.`,
-        duration: 2000,
-      });
     } else {
       if (user) {
         try {

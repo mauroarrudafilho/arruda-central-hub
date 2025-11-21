@@ -30,7 +30,7 @@ export interface ProjectModule {
 export const DEFAULT_MODULE_DEFINITIONS: Array<Omit<ProjectModule, 'id' | 'project_id' | 'ordem'>> = [
   {
     nome: 'Gestão de Usuários',
-    slug: 'gestao-usuarios',
+    slug: 'arruda-rbac-master',
     icone: 'Users',
     rota: '/users',
     url_externa: null,
@@ -96,7 +96,7 @@ export const DEFAULT_MODULE_DEFINITIONS: Array<Omit<ProjectModule, 'id' | 'proje
   },
   {
     nome: 'Trade Marketing',
-    slug: 'trade-marketing',
+    slug: 'degusta-go-app',
     icone: 'BarChart3',
     rota: null,
     url_externa: 'https://degusta-go.lovable.app/',
@@ -107,7 +107,7 @@ export const DEFAULT_MODULE_DEFINITIONS: Array<Omit<ProjectModule, 'id' | 'proje
   },
   {
     nome: 'Acordos Comerciais',
-    slug: 'acordos-comerciais',
+    slug: 'acordo-flow',
     icone: 'FileText',
     rota: null,
     url_externa: 'https://acordo-flow.vercel.app',
@@ -118,7 +118,7 @@ export const DEFAULT_MODULE_DEFINITIONS: Array<Omit<ProjectModule, 'id' | 'proje
   },
   {
     nome: 'Meus Documentos',
-    slug: 'meus-documentos',
+    slug: 'nfe-radar',
     icone: 'FileText',
     rota: null,
     url_externa: 'https://nfe-radar.lovable.app/auth',

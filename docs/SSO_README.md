@@ -2,6 +2,16 @@
 
 Bem-vindo à documentação completa do sistema de Single Sign-On (SSO) do Arruda Central Hub.
 
+> ⭐ **⭐ DOCUMENTO PRINCIPAL E DEFINITIVO ⭐**  
+> **[SSO_GLOBAL_SOLUTION.md](./SSO_GLOBAL_SOLUTION.md)** - Solução global e completa para todos os problemas de SSO, incluindo:
+> - Envio automático de token em requisições
+> - Validação entre telas
+> - Renovação automática
+> - Sincronização entre abas
+> - Tratamento de erros
+> 
+> **Use este documento para implementação completa em qualquer módulo externo.**
+
 ## 📚 Documentos Disponíveis
 
 ### 🚀 Para Começar Rápido
@@ -62,14 +72,18 @@ Bem-vindo à documentação completa do sistema de Single Sign-On (SSO) do Arrud
 
 ## 🎯 Qual Documento Usar?
 
-### Se você quer implementar AGORA:
+### ⭐ Para implementação completa e resolver TODOS os problemas:
+👉 **[SSO_GLOBAL_SOLUTION.md](SSO_GLOBAL_SOLUTION.md)** ⭐ **RECOMENDADO**
+
+### Se você quer implementar rápido (versão básica):
 👉 **[SSO_IMPLEMENTATION_COMMAND.md](SSO_IMPLEMENTATION_COMMAND.md)**
 
 ### Se você quer entender COMO funciona:
 👉 **[SSO_MODULE_INTEGRATION_GUIDE.md](SSO_MODULE_INTEGRATION_GUIDE.md)**
 
-### Se você tem problemas:
-👉 **[SSO_DEBUG.md](SSO_DEBUG.md)**
+### Se você tem problemas específicos:
+👉 **[SSO_DEBUG.md](SSO_DEBUG.md)**  
+👉 **[SSO_FIX_CATALOG_MAKER_AUTH.md](SSO_FIX_CATALOG_MAKER_AUTH.md)** (erro "User not authenticated")
 
 ### Se você quer uma visão geral:
 👉 **[SSO_EXECUTIVE_SUMMARY.md](SSO_EXECUTIVE_SUMMARY.md)**
@@ -120,5 +134,6 @@ Se encontrar problemas:
 
 ---
 
-**Última atualização**: 15 de Novembro de 2025
+**Última atualização**: 05 de Fevereiro de 2025  
+**Documento Principal**: [SSO_GLOBAL_SOLUTION.md](./SSO_GLOBAL_SOLUTION.md)
 

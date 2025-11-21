@@ -121,10 +121,11 @@ VALUES (gen_random_uuid(), 'Nova Org', 'nova-org', 'Descrição da nova organiza
 
 #### **UPDATE (Atualização):**
 ```sql
--- Código antigo continua funcionando
+-- Código antigo continua funcionando (exemplo com slug antigo)
 UPDATE public.modules SET status = 'disponivel' WHERE slug = 'acordos-comerciais';
 -- ↓ Redirecionado automaticamente para ↓
-UPDATE public.rbac_modules SET status = 'disponivel', updated_at = now() WHERE slug = 'acordos-comerciais';
+-- Nota: O slug correto no banco é 'acordo-flow' para o projeto 'Acordos Comerciais'
+UPDATE public.rbac_modules SET status = 'disponivel', updated_at = now() WHERE slug = 'acordo-flow';
 ```
 
 #### **DELETE (Exclusão):**

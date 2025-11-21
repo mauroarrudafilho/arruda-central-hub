@@ -347,7 +347,7 @@ interface SSOUser {
   email: string;                 // Email do usuário
   name: string;                  // Nome do usuário
   projectId: string;             // UUID do projeto
-  projectSlug: string;           // Slug do projeto (ex: "acordos")
+  projectSlug: string;           // Slug do projeto (ex: "acordo-flow")
   projectName: string;           // Nome do projeto (ex: "Acordos Comerciais")
   permissions: Array<{           // Array de permissões
     permission: string;

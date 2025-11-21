@@ -351,7 +351,7 @@ A função RPC `validate_sso_token` retorna um array com um objeto contendo:
   user_email: string;          // Email do usuário
   user_name: string;           // Nome do usuário
   project_id: string;         // UUID do projeto (Acordos Comerciais)
-  project_slug: string;       // 'acordos'
+  project_slug: string;       // 'acordo-flow'
   project_name: string;       // 'Acordos Comerciais'
   expires_at: string;          // ISO 8601 timestamp (ex: '2025-11-19T10:00:00Z')
   permissions: Array<{         // Array de permissões do usuário
@@ -373,7 +373,7 @@ O hook `useSSO` retorna um objeto `SSOUser` com:
   email: string;              // Email do usuário
   name: string;               // Nome do usuário
   projectId: string;          // UUID do projeto
-  projectSlug: string;        // 'acordos'
+  projectSlug: string;        // 'acordo-flow'
   projectName: string;        // 'Acordos Comerciais'
   permissions: Array<{        // Permissões do usuário
     permission: string;

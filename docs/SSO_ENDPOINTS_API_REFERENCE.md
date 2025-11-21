@@ -99,6 +99,101 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 |------------|-------|
 | **Método** | RPC (Remote Procedure Call) |
 | **Função** | `validate_sso_token` |
+| **Uso** | Validar token SSO recebido na URL ou localStorage |
+
+---
+
+## 🔐 Endpoint: Obter Usuário SSO do Header (Para Requisições)
+
+### Informações Gerais
+
+| Propriedade | Valor |
+|------------|-------|
+| **Método** | RPC (Remote Procedure Call) |
+| **Função** | `get_sso_user_from_header` |
+| **Uso** | Obter usuário autenticado a partir do header `x-sso-token` em requisições subsequentes |
+
+### Descrição
+
+Esta função permite que outras funções RPC validem a autenticação SSO através do header HTTP `x-sso-token`. Use esta função dentro de outras funções RPC que precisam verificar se o usuário está autenticado via SSO.
+
+### Parâmetros
+
+Nenhum. A função lê automaticamente o header `x-sso-token` da requisição HTTP.
+
+### Retorno
+
+```typescript
+interface SSOUserFromHeader {
+  user_id: UUID | null;
+  user_email: string | null;
+  user_name: string | null;
+  is_valid: boolean;
+}
+```
+
+### Exemplo de Uso em Função RPC
+
+```sql
+-- Exemplo: Função que precisa de autenticação SSO
+CREATE OR REPLACE FUNCTION public.get_user_metrics()
+RETURNS TABLE (metric_name TEXT, metric_value NUMERIC)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  _sso_user RECORD;
+  _user_id UUID;
+BEGIN
+  -- Obter usuário do token SSO
+  SELECT * INTO _sso_user
+  FROM public.get_sso_user_from_header();
+  
+  -- Se não encontrou via SSO, tentar via Supabase Auth
+  IF NOT _sso_user.is_valid THEN
+    _user_id := auth.uid();
+  ELSE
+    _user_id := _sso_user.user_id;
+  END IF;
+  
+  -- Se ainda não tem usuário, retornar erro
+  IF _user_id IS NULL THEN
+    RAISE EXCEPTION 'User not authenticated';
+  END IF;
+  
+  -- Retornar métricas do usuário
+  RETURN QUERY
+  SELECT m.name, m.value
+  FROM metrics m
+  WHERE m.user_id = _user_id;
+END;
+$$;
+```
+
+### Exemplo de Uso no Front-end
+
+```typescript
+// O token SSO é enviado automaticamente via interceptor
+// (veja seção "Enviar Token SSO em Requisições Subsequentes")
+
+const { data, error } = await supabase.rpc('get_user_metrics');
+
+if (error) {
+  console.error('Erro ao buscar métricas:', error);
+  // Se erro for "User not authenticated", verificar se token SSO está sendo enviado
+}
+```
+
+---
+
+## 🔐 Endpoint: Validar Token SSO (Original)
+
+### Informações Gerais
+
+| Propriedade | Valor |
+|------------|-------|
+| **Método** | RPC (Remote Procedure Call) |
+| **Função** | `validate_sso_token` |
 | **Autenticação** | Não requerida (usa token SSO) |
 | **Rate Limit** | Sem limite específico |
 | **Timeout** | 30 segundos |
@@ -593,7 +688,54 @@ async function validateTokenWithCache(token: string): Promise<SSOUser | null> {
 window.history.replaceState({}, '', window.location.pathname);
 ```
 
-### 2. Validar Token em Cada Requisição Crítica
+### 2. Enviar Token SSO em Requisições Subsequentes
+
+**⚠️ IMPORTANTE**: O token SSO deve ser enviado em **todas** as requisições ao Supabase para que o backend possa validar a autenticação.
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = 'https://kgzybpelluftexrewyke.supabase.co';
+const SUPABASE_ANON_KEY = 'sua-chave-anon';
+
+// Função para obter token SSO
+const getSSOToken = (): string | null => {
+  return localStorage.getItem('arruda_sso_token');
+};
+
+// Criar cliente com interceptor para adicionar token SSO
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    headers: {},
+  },
+  auth: {
+    persistSession: false, // Não usar sessão Supabase Auth quando usando SSO
+  },
+});
+
+// Interceptor para adicionar token SSO em todas as requisições
+const originalFetch = supabase.rest.fetch;
+supabase.rest.fetch = async (url, options = {}) => {
+  const ssoToken = getSSOToken();
+  
+  const headers = new Headers(options.headers);
+  if (ssoToken) {
+    headers.set('x-sso-token', ssoToken);
+  }
+  
+  return originalFetch(url, {
+    ...options,
+    headers,
+  });
+};
+```
+
+**Por que isso é necessário?**
+- O backend precisa do token SSO para validar que a requisição é autenticada
+- Sem o token no header, funções RPC que verificam autenticação retornarão erro "User not authenticated"
+- O token é validado automaticamente pela função `get_sso_user_from_header()` no backend
+
+### 3. Validar Token em Cada Requisição Crítica
 
 ```typescript
 async function makeAuthenticatedRequest(endpoint: string) {
@@ -714,6 +856,36 @@ if (!hasPermission(user, 'acordos', 'create')) {
 2. Verificar se roles têm permissões
 3. Verificar estrutura RBAC no banco
 
+### Problema 5: "User not authenticated" em requisições subsequentes
+
+**Sintomas:**
+- ✅ Token SSO validado com sucesso na inicialização
+- ✅ Estado da aplicação mostra `isSSO: true` e `isAuthenticated: true`
+- ❌ Erro `Error: User not authenticated` ao fazer requisições (ex: buscar métricas, produtos)
+
+**Causa:**
+O token SSO não está sendo enviado nas requisições subsequentes ao Supabase. O backend precisa do token no header `x-sso-token` para validar a autenticação.
+
+**Soluções:**
+
+1. **Configurar cliente Supabase com interceptor** (veja seção "Enviar Token SSO em Requisições Subsequentes")
+2. **Verificar se header está sendo enviado:**
+   ```typescript
+   // No Network tab do DevTools, verificar se header x-sso-token está presente
+   ```
+3. **Verificar se função RPC usa `get_sso_user_from_header()`:**
+   ```sql
+   -- Funções RPC devem verificar token SSO primeiro
+   SELECT * INTO _sso_user FROM public.get_sso_user_from_header();
+   ```
+4. **Verificar se migration foi aplicada:**
+   ```sql
+   -- Verificar se função existe
+   SELECT proname FROM pg_proc WHERE proname = 'get_sso_user_from_header';
+   ```
+
+**Guia Completo:** Veja `docs/SSO_FIX_CATALOG_MAKER_AUTH.md` para solução detalhada.
+
 ### Checklist de Debug
 
 ```typescript
@@ -745,6 +917,7 @@ if (data && data[0]) {
 
 - **Guia Completo SSO**: `docs/SSO_COMPLETE_GUIDE.md`
 - **Guia de Integração**: `docs/SSO_MODULE_INTEGRATION_GUIDE.md`
+- **Fix Catalog Maker Auth**: `docs/SSO_FIX_CATALOG_MAKER_AUTH.md` ⭐ **NOVO**
 - **Exemplos de Código**: `examples/useSSO.ts`
 
 ### URLs Importantes
@@ -800,6 +973,12 @@ const { data, error } = await supabase.rpc('generate_sso_token', {
 
 ## 📝 Changelog
 
+### Versão 1.2.0 (05/02/2025)
+- ✅ **NOVO**: Função `get_sso_user_from_header()` para validar token SSO em requisições subsequentes
+- ✅ Adicionada seção sobre como enviar token SSO em requisições HTTP
+- ✅ Adicionado guia de troubleshooting para erro "User not authenticated"
+- ✅ Migration SQL criada para suporte a validação via header
+
 ### Versão 1.1.0 (21/11/2025)
 - Atualizada lista de projetos e slugs
 - Slugs atualizados para corresponder aos nomes dos projetos no Vercel
@@ -813,7 +992,7 @@ const { data, error } = await supabase.rpc('generate_sso_token', {
 
 ---
 
-**Última atualização:** 21 de Novembro de 2025  
+**Última atualização:** 05 de Fevereiro de 2025  
 **Mantido por:** Equipe Arruda Central Hub  
 **Status:** Produção ✅
 
