@@ -37,8 +37,9 @@ export const useAuthState = () => {
   const adminCheckCacheRef = useRef<{ userId: string; isAdmin: boolean; timestamp: number } | null>(null);
   const ADMIN_CACHE_TTL = 60000; // 1 minuto
   
-  // Ref para debounce de eventos de autenticação
+  // Refs para controle de eventos de autenticação
   const lastEventTimeRef = useRef<number>(0);
+  const lastProcessedSessionRef = useRef<string | null>(null); // Armazena o access_token da última sessão processada
 
   useEffect(() => {
     let isMounted = true;
@@ -138,6 +139,8 @@ export const useAuthState = () => {
         setAdminChecked(true);
         // Limpar cache quando não há sessão
         adminCheckCacheRef.current = null;
+        // Limpar referência da sessão processada
+        lastProcessedSessionRef.current = null;
       }
 
       if (isMounted) {
@@ -173,6 +176,15 @@ export const useAuthState = () => {
       
       console.log('[useAuth] Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
       
+      // Identificar a sessão atual pelo access_token (ou null se não houver sessão)
+      const currentSessionToken = session?.access_token || null;
+      
+      // Verificar se esta é a mesma sessão que já foi processada
+      if (currentSessionToken && currentSessionToken === lastProcessedSessionRef.current) {
+        console.log('⏭️ [useAuth] Ignorando evento - mesma sessão já processada:', event);
+        return;
+      }
+      
       // Processar eventos importantes sempre, mas com proteção contra duplicatas
       const isImportantEvent = event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED';
       
@@ -181,6 +193,10 @@ export const useAuthState = () => {
       if (isImportantEvent || !sessionHandledRef.current) {
         console.log('[useAuth] Processando sessão do evento:', event);
         sessionHandledRef.current = true;
+        
+        // Atualizar referência da sessão processada
+        lastProcessedSessionRef.current = currentSessionToken;
+        
         try {
           await handleSession(session);
           
