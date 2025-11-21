@@ -1,6 +1,38 @@
-# 🔍 Debug SSO - Token não aparece na URL
+# 🔍 Debug SSO - Token não está sendo armazenado corretamente
 
-## Problema Identificado
+## ⚠️ Problema Identificado
+
+O token SSO está sendo gerado e adicionado à URL, mas **não está sendo armazenado corretamente** na tabela `user_sessions` do banco de dados. Quando o módulo externo tenta validar o token usando `validate_sso_token`, ele não encontra a sessão porque:
+
+1. **Falta constraint única**: A função `generate_sso_token` usa `ON CONFLICT (user_id, frontend_module)`, mas a tabela `user_sessions` não tinha essa constraint única, causando erro silencioso na inserção.
+
+2. **Falta campo status**: A função tenta usar o campo `status` que não existia na tabela `user_sessions`.
+
+## ✅ Solução Implementada
+
+Foi criada uma migration (`20250204000000_fix_user_sessions_for_sso.sql`) que:
+- Adiciona o campo `status` à tabela `user_sessions` (valores: 'ativo', 'inativo', 'expirado')
+- Adiciona constraint única em `(user_id, frontend_module)` para permitir o `ON CONFLICT` funcionar corretamente
+
+**⚠️ IMPORTANTE**: Execute a migration antes de testar novamente!
+
+## 📋 Como o Sistema Funciona
+
+O sistema SSO usa a tabela `user_sessions` (não `sso_sessions` como mencionado em alguns documentos):
+
+1. **Hub Central** chama `generate_sso_token(_project_slug)` que:
+   - Gera um token único
+   - Insere/atualiza sessão na tabela `user_sessions`
+   - Retorna o token para ser adicionado à URL
+
+2. **Módulo Externo** recebe `?sso_token=TOKEN&from=arruda-hub` e chama `validate_sso_token(_token)` que:
+   - Busca a sessão na tabela `user_sessions`
+   - Valida se está ativa e não expirada
+   - Retorna informações do usuário e permissões
+
+## 🔧 Problemas Anteriores (Resolvidos)
+
+### Problema 1: Token não aparece na URL
 
 Quando você clica em um módulo externo no Hub, a URL não contém o token SSO (`?sso_token=...&from=arruda-hub`).
 
@@ -114,8 +146,31 @@ console.log('Token SSO:', new URLSearchParams(window.location.search).get('sso_t
 
 ## 📞 Próximos Passos
 
-1. **Teste novamente** e verifique o console do Hub
-2. **Verifique a URL** que foi aberta (deve conter o token)
-3. **Se a URL tem o token**, o problema está no módulo externo - precisa implementar validação SSO
-4. **Se a URL não tem o token**, o problema está no Hub - me avise e investigo mais
+1. **Execute a migration** `20250204000000_fix_user_sessions_for_sso.sql` no banco de dados
+2. **Teste novamente** e verifique o console do Hub
+3. **Verifique a URL** que foi aberta (deve conter o token)
+4. **Verifique no banco** se a sessão foi criada:
+   ```sql
+   SELECT * FROM user_sessions 
+   WHERE session_token = 'TOKEN_AQUI'
+   ORDER BY created_at DESC;
+   ```
+5. **Se a URL tem o token mas a validação falha**, verifique se a sessão existe no banco
+6. **Se a URL não tem o token**, o problema está no Hub - verifique os logs do console
+
+## 🗄️ Estrutura da Tabela user_sessions
+
+A tabela `user_sessions` armazena as sessões SSO com os seguintes campos:
+- `id`: UUID único
+- `user_id`: ID do usuário autenticado
+- `project_id`: ID do projeto/módulo
+- `session_token`: Token único usado na URL (UNIQUE)
+- `frontend_module`: Nome do módulo (ex: 'arruda-catalog-maker')
+- `frontend_origin`: Origem do frontend
+- `status`: Status da sessão ('ativo', 'inativo', 'expirado')
+- `expires_at`: Data de expiração (12 horas após criação)
+- `last_activity`: Última atividade
+- `created_at`, `updated_at`: Timestamps
+
+**Constraint única**: `(user_id, frontend_module)` - garante uma sessão ativa por usuário/módulo
 
