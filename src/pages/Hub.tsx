@@ -108,6 +108,49 @@ const formatDateTime = (dateString?: string) => {
   }
 };
 
+// Hook para countdown em tempo real
+const useCountdown = (targetDate: string | null) => {
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    if (!targetDate) {
+      setTimeLeft(null);
+      setExpired(false);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const target = new Date(targetDate);
+      const difference = target.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setExpired(true);
+        return;
+      }
+
+      setExpired(false);
+      const hours = Math.floor(difference / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ hours, minutes, seconds });
+    };
+
+    // Atualizar imediatamente
+    updateCountdown();
+
+    // Atualizar a cada segundo
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return { timeLeft, expired };
+};
+
 const Hub = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuthState();
@@ -128,6 +171,9 @@ const Hub = () => {
   const [moduleUsageLoading, setModuleUsageLoading] = useState(false);
   const [userProjectInsights, setUserProjectInsights] = useState<Record<string, { count: number; lastAccess?: string }>>({});
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(true);
+
+  // Countdown da sessão
+  const { timeLeft, expired } = useCountdown(userStats?.sessionExpires || null);
 
   const loadModuleUsageStats = useCallback(async () => {
     try {
@@ -275,10 +321,14 @@ const Hub = () => {
         // Continuar com valor padrão
       }
 
+      // Sessão expira em 12 horas a partir de agora (timezone Brasil)
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
       setUserStats({
         totalProjects: availableProjectsCount,
         lastLogin: profile?.ultimo_login || new Date().toISOString(),
-        sessionExpires: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        sessionExpires: expiresAt.toISOString(),
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
@@ -461,7 +511,7 @@ const Hub = () => {
         }
       }
       
-      // Redirecionar diretamente para o módulo externo com token SSO na URL
+      // Abrir módulo externo com token SSO na URL
       // O módulo externo deve validar o token usando validate_sso_token
       const finalUrl = url.toString();
       console.log('🔵 Abrindo URL com SSO:', finalUrl);
@@ -472,15 +522,42 @@ const Hub = () => {
         fullUrl: finalUrl
       });
       
-      // Tentar abrir em nova aba primeiro, se falhar usar window.location.href
-      // window.open pode ser bloqueado por popup blockers, então temos fallback
+      // Sempre tentar abrir em nova aba - NUNCA redirecionar a página do Hub
+      // Se popup blocker bloquear, mostrar aviso ao usuário
       const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
       
-      // Se window.open foi bloqueado ou falhou, redirecionar na mesma aba
+      // Verificar se window.open foi bloqueado por popup blocker
       if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        console.warn('⚠️ window.open foi bloqueado, redirecionando na mesma aba');
-        window.location.href = finalUrl;
+        console.warn('⚠️ window.open foi bloqueado por popup blocker');
+        toast({
+          title: 'Popup bloqueado',
+          description: `Por favor, permita popups para este site ou abra manualmente: ${project.nome}. O link será copiado para a área de transferência.`,
+          variant: 'default',
+          duration: 5000,
+        });
+        
+        // Tentar copiar link automaticamente
+        navigator.clipboard.writeText(finalUrl).then(() => {
+          toast({
+            title: 'Link copiado!',
+            description: 'O link foi copiado para a área de transferência. Cole na barra de endereços.',
+            duration: 3000,
+          });
+        }).catch(() => {
+          // Se falhar, mostrar o link em prompt
+          prompt('Copie este link:', finalUrl);
+        });
+        
+        // NÃO redirecionar - manter o usuário no Hub
+        return;
       }
+      
+      // Se abriu com sucesso, mostrar feedback positivo
+      toast({
+        title: 'Abrindo em nova aba',
+        description: `${project.nome} está sendo aberto em uma nova aba.`,
+        duration: 2000,
+      });
     } else {
       if (user) {
         try {
@@ -665,9 +742,38 @@ const Hub = () => {
                       <Clock3 className="h-4 w-4 text-blue-500" />
                       <span>Último acesso: {formatDateTime(userStats.lastLogin)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-blue-500" />
-                      <span>Sessão expira em: {new Date(userStats.sessionExpires).toLocaleTimeString('pt-BR')}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-blue-500" />
+                        <span>
+                          {expired ? (
+                            <span className="text-red-600 font-medium">Sessão expirada</span>
+                          ) : timeLeft ? (
+                            <>
+                              Sessão expira em:{' '}
+                              <span className="font-mono font-medium">
+                                {String(timeLeft.hours).padStart(2, '0')}:
+                                {String(timeLeft.minutes).padStart(2, '0')}:
+                                {String(timeLeft.seconds).padStart(2, '0')}
+                              </span>
+                            </>
+                          ) : (
+                            'Calculando...'
+                          )}
+                        </span>
+                      </div>
+                      {userStats.sessionExpires && !expired && (
+                        <div className="flex items-center gap-2 ml-6 text-xs text-gray-500">
+                          <span>
+                            Expira em:{' '}
+                            {new Date(userStats.sessionExpires).toLocaleString('pt-BR', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                              timeZone: 'America/Sao_Paulo',
+                            })}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
