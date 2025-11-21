@@ -763,7 +763,47 @@ Para problemas técnicos ou dúvidas sobre integração:
 
 ---
 
+## 📋 Projetos Cadastrados e Slugs
+
+### Lista Completa de Projetos
+
+Abaixo está a lista completa de projetos cadastrados no sistema com seus respectivos slugs que devem ser usados na função `generate_sso_token`:
+
+| # | Nome do Projeto | Slug | URL Vercel | Status |
+|---|----------------|------|------------|--------|
+| 1 | **Acordos Comerciais** | `acordo-flow` | https://acordo-flow.vercel.app | ✅ Ativo |
+| 2 | **Comercial+** | `arruda-sales-boost` | https://arruda-sales-boost.vercel.app | ✅ Ativo |
+| 3 | **Financeiro** | `arruda-flow-buddy` | https://arruda-flow-buddy.vercel.app/ | ✅ Ativo |
+| 4 | **Gestão de Usuários** | `arruda-rbac-master` | https://arruda-rbac-master.vercel.app/auth | ✅ Ativo |
+| 5 | **Meus Documentos** | `nfe-radar` | https://nfe-radar.vercel.app/auth | ✅ Ativo |
+| 6 | **Meus Produtos** | `arruda-catalog-maker` | https://arruda-catalog-maker.vercel.app | ✅ Ativo |
+| 7 | **Trade Marketing** | `degusta-go-app` | https://degusta-go.vercel.app/ | ✅ Ativo |
+
+### ⚠️ Importante sobre Slugs
+
+- **Os slugs devem corresponder exatamente aos nomes dos projetos no Vercel**
+- **Use o slug correto ao chamar `generate_sso_token` no Hub Central**
+- **Slugs são case-sensitive e devem ser escritos exatamente como na tabela acima**
+
+### Exemplo de Uso
+
+```typescript
+// No Hub Central, ao gerar token SSO para "Acordos Comerciais"
+const { data, error } = await supabase.rpc('generate_sso_token', {
+  _project_slug: 'acordo-flow' // ✅ Slug correto
+});
+
+// ❌ NÃO use: 'acordos' ou 'acordos-comerciais'
+```
+
+---
+
 ## 📝 Changelog
+
+### Versão 1.1.0 (05/02/2025)
+- Atualizada lista de projetos e slugs
+- Slugs atualizados para corresponder aos nomes dos projetos no Vercel
+- Adicionada seção de referência de projetos cadastrados
 
 ### Versão 1.0.0 (15/11/2025)
 - Documentação inicial
@@ -773,7 +813,7 @@ Para problemas técnicos ou dúvidas sobre integração:
 
 ---
 
-**Última atualização:** 15 de Novembro de 2025  
+**Última atualização:** 05 de Fevereiro de 2025  
 **Mantido por:** Equipe Arruda Central Hub  
 **Status:** Produção ✅
 
