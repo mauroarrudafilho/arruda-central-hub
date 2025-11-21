@@ -36,9 +36,13 @@ export const useAuthState = () => {
   const sessionHandledRef = useRef(false);
   const adminCheckCacheRef = useRef<{ userId: string; isAdmin: boolean; timestamp: number } | null>(null);
   const ADMIN_CACHE_TTL = 60000; // 1 minuto
+  
+  // Ref para debounce de eventos de autenticação
+  const lastEventTimeRef = useRef<number>(0);
 
   useEffect(() => {
     let isMounted = true;
+    let initialSessionLoaded = false;
 
     const verifyAdminStatus = async (userId: string) => {
       if (!isMounted) return;
@@ -144,21 +148,46 @@ export const useAuthState = () => {
 
     console.log('[useAuth] Configurando listener de mudanças de autenticação');
     
+    // Debounce para evitar múltiplos processamentos do mesmo evento
+    // O Supabase pode disparar múltiplos eventos SIGNED_IN em sequência
+    const DEBOUNCE_MS = 300; // 300ms é suficiente para filtrar eventos duplicados
+    
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[useAuth] Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
+      if (!isMounted) return;
       
-      // Resetar sessionHandled para eventos importantes
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        sessionHandledRef.current = false;
+      // Debounce: ignorar eventos muito próximos
+      const now = Date.now();
+      if (now - lastEventTimeRef.current < DEBOUNCE_MS && event === 'SIGNED_IN') {
+        console.log('⏭️ [useAuth] Ignorando evento SIGNED_IN duplicado (debounce)');
+        return;
+      }
+      lastEventTimeRef.current = now;
+      
+      // Ignorar INITIAL_SESSION se já carregamos a sessão inicial
+      if (event === 'INITIAL_SESSION' && initialSessionLoaded) {
+        console.log('⏭️ [useAuth] Ignorando INITIAL_SESSION duplicado');
+        return;
       }
       
-      if (!sessionHandledRef.current || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      console.log('[useAuth] Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
+      
+      // Processar eventos importantes sempre, mas com proteção contra duplicatas
+      const isImportantEvent = event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED';
+      
+      // Para eventos importantes, verificar se já foi processado recentemente (via debounce)
+      // Para outros eventos, usar sessionHandledRef normalmente
+      if (isImportantEvent || !sessionHandledRef.current) {
         console.log('[useAuth] Processando sessão do evento:', event);
         sessionHandledRef.current = true;
         try {
           await handleSession(session);
+          
+          // Marcar que sessão inicial foi carregada
+          if (event === 'INITIAL_SESSION') {
+            initialSessionLoaded = true;
+          }
         } catch (err) {
           console.error('[useAuth] Erro em handleSession:', err);
           if (isMounted) {
@@ -166,6 +195,8 @@ export const useAuthState = () => {
             setAdminChecked(true);
           }
         }
+      } else {
+        console.log('⏭️ [useAuth] Ignorando evento (já processado):', event);
       }
     });
 
