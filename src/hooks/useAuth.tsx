@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { securityLogger } from '@/lib/security-logger';
+import { clearSSOTokens } from '@/lib/sso-token-manager';
 
 interface AuthContextType {
   user: User | null;
@@ -419,6 +420,7 @@ export const useAuthState = () => {
       localStorage.removeItem('arruda_sso_user');
       localStorage.removeItem('arruda_sso_token');
       localStorage.removeItem('arruda_sso_expires');
+      clearSSOTokens(); // Limpar tokens SSO pré-gerados
       localStorage.clear();
       sessionStorage.clear();
 

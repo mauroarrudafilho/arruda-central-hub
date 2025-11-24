@@ -8,11 +8,138 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Storage wrapper customizado que valida tokens ANTES de retorná-los
+ * Se o token estiver expirado/inválido, limpa SÍNCRONAMENTE e retorna null
+ * Assim o Supabase nunca tenta renovar um token inválido, evitando erros
+ */
+class ValidatedAuthStorage {
+  private storageKey: string;
+  private baseStorage: Storage;
+
+  constructor(baseStorage: Storage) {
+    this.baseStorage = baseStorage;
+    // A chave do Supabase é: sb-{project-ref}-auth-token
+    const projectRef = SUPABASE_URL.split('//')[1].split('.')[0];
+    this.storageKey = `sb-${projectRef}-auth-token`;
+  }
+
+  /**
+   * Valida se um token de sessão está válido e pode ser usado
+   */
+  private isValidToken(sessionData: any): boolean {
+    if (!sessionData || typeof sessionData !== 'object') {
+      return false;
+    }
+    
+    // Verificar se há access_token ou refresh_token
+    if (!sessionData.access_token && !sessionData.refresh_token) {
+      return false;
+    }
+
+    // Verificar expiração do access_token se existir
+    if (sessionData.expires_at) {
+      const expiresAt = sessionData.expires_at * 1000; // Converter de segundos para ms
+      const now = Date.now();
+      const expiresIn = expiresAt - now;
+      
+      // Se o token expirou há mais de 5 minutos, considerar inválido
+      // (dar margem para refresh, mas não tentar renovar tokens muito antigos)
+      if (expiresIn < -300000) { // -5 minutos em ms
+        return false;
+      }
+    }
+
+    // Se há refresh_token, considerar válido (pode ser renovado)
+    // Se não há refresh_token mas há access_token, verificar expiração
+    if (!sessionData.refresh_token && sessionData.access_token) {
+      if (sessionData.expires_at) {
+        const expiresAt = sessionData.expires_at * 1000;
+        const now = Date.now();
+        // Se expirou, precisa de refresh_token para renovar
+        if (expiresAt < now) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  getItem(key: string): string | null {
+    const value = this.baseStorage.getItem(key);
+    
+    // Se não é a chave de auth ou não há valor, retornar normalmente
+    if (key !== this.storageKey || !value) {
+      return value;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      
+      // VALIDAR ANTES DE RETORNAR
+      // Se o token está inválido/expirado, limpar SÍNCRONAMENTE e retornar null
+      // Isso previne que o Supabase tente renovar um token inválido
+      if (!this.isValidToken(parsed)) {
+        console.debug('[Supabase] Token inválido/expirado detectado, limpando ANTES da renovação...');
+        this.baseStorage.removeItem(key);
+        return null; // Retornar null faz o Supabase pensar que não há sessão
+      }
+
+      return value; // Token válido, retornar normalmente
+    } catch (e) {
+      // Se não conseguir fazer parse, é dado corrompido - limpar
+      console.debug('[Supabase] Dados de sessão corrompidos, limpando...');
+      this.baseStorage.removeItem(key);
+      return null;
+    }
+  }
+
+  setItem(key: string, value: string): void {
+    // Validar antes de salvar também
+    if (key === this.storageKey) {
+      try {
+        const parsed = JSON.parse(value);
+        if (!this.isValidToken(parsed)) {
+          console.debug('[Supabase] Tentativa de salvar token inválido, ignorando...');
+          return; // Não salvar token inválido
+        }
+      } catch (e) {
+        // Dados corrompidos, não salvar
+        console.debug('[Supabase] Dados corrompidos na tentativa de salvar, ignorando...');
+        return;
+      }
+    }
+    
+    this.baseStorage.setItem(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.baseStorage.removeItem(key);
+  }
+
+  get length(): number {
+    return this.baseStorage.length;
+  }
+
+  clear(): void {
+    this.baseStorage.clear();
+  }
+
+  key(index: number): string | null {
+    return this.baseStorage.key(index);
+  }
+}
+
+// Criar storage validado
+const validatedStorage = new ValidatedAuthStorage(localStorage);
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: validatedStorage, // Usar storage customizado ao invés de localStorage direto
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: false, // Não detectar sessão na URL
   },
   global: {
     headers: {
@@ -22,7 +149,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // Verificar conexão na inicialização
-console.log('[Supabase] Inicializando cliente:', {
+console.log('[Supabase] Inicializando cliente com storage validado:', {
   url: SUPABASE_URL,
   hasKey: !!SUPABASE_PUBLISHABLE_KEY,
   keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0

@@ -240,6 +240,32 @@ const Hub = () => {
     loadUserProjectInsights();
   }, [loadUserProjectInsights]);
 
+  // Pré-gerar tokens SSO quando projetos são carregados e usuário está autenticado
+  // Para plataformas com uso restrito, pré-gera todos os tokens de uma vez
+  useEffect(() => {
+    if (!projectsLoading && projects.length > 0 && user) {
+      // Executar em background para não bloquear a UI
+      import('@/lib/sso-token-manager').then(({ preGenerateSSOTokens, refreshSSOTokensForNewModules }) => {
+        // Verificar se já existem tokens (pode ter sido gerado no login)
+        const existingTokens = localStorage.getItem('arruda_sso_tokens');
+        
+        if (!existingTokens || Object.keys(JSON.parse(existingTokens || '{}')).length === 0) {
+          // Primeira vez - gerar tokens para todos os módulos externos
+          console.log('[Hub] Pré-gerando tokens SSO para todos os módulos externos...');
+          preGenerateSSOTokens(projects).catch((error) => {
+            console.error('[Hub] Erro ao pré-gerar tokens SSO:', error);
+          });
+        } else {
+          // Verificar se há novos módulos que precisam de tokens
+          console.log('[Hub] Verificando se há novos módulos que precisam de tokens SSO...');
+          refreshSSOTokensForNewModules(projects).catch((error) => {
+            console.error('[Hub] Erro ao atualizar tokens SSO:', error);
+          });
+        }
+      });
+    }
+  }, [projects, projectsLoading, user]);
+
   const normalizedProjects: NormalizedProject[] = useMemo(() => {
     return projects.map((project) => {
       const available = isProjectAvailable(project);
@@ -428,80 +454,50 @@ const Hub = () => {
       let ssoToken: string | null = null;
 
       if (user) {
-        console.log('🔵 Usuário encontrado, gerando token SSO...');
-        try {
-          // Gerar token SSO para módulo externo
-          console.log('🔵 Chamando generate_sso_token com slug:', project.slug);
-          const { data: tokenData, error: tokenError } = await supabase
-            .rpc('generate_sso_token', {
-              _project_slug: project.slug,
-            });
-
-          console.log('🔵 Resposta do generate_sso_token:', {
-            hasData: !!tokenData,
-            dataLength: tokenData?.length,
-            error: tokenError,
+        // Usar token pré-gerado se disponível
+        const { getSSOToken, generateSSOTokenForModule } = await import('@/lib/sso-token-manager');
+        const existingToken = getSSOToken(project.slug);
+        
+        if (existingToken) {
+          // Token pré-gerado válido - usar imediatamente
+          ssoToken = existingToken.token;
+          console.log('✅ Token SSO pré-gerado encontrado e válido:', {
+            project: project.nome,
+            expiresAt: existingToken.expires_at,
           });
-
-          if (!tokenError && tokenData && tokenData.length > 0) {
-            ssoToken = tokenData[0].token;
-            // Garantir que os parâmetros SSO sejam sempre adicionados, mesmo se já existirem na URL
-            url.searchParams.set('sso_token', ssoToken);
-            url.searchParams.set('from', 'arruda-hub');
-            // Adicionar timestamp para evitar cache
-            url.searchParams.set('_t', Date.now().toString());
-            console.log('✅ Token SSO gerado e adicionado à URL:', {
-              project: project.nome,
-              url: url.toString(),
-              hasToken: !!ssoToken,
-              tokenLength: ssoToken?.length,
-              expiresAt: tokenData[0].expires_at,
-            });
-            
-            toast({
-              title: 'Token SSO gerado',
-              description: `Token válido por 12 horas. Redirecionando...`,
-              duration: 2000,
-            });
-          } else {
-            console.error('⚠️ Falha ao gerar token SSO:', {
-              error: tokenError,
-              errorMessage: tokenError?.message,
-              errorCode: tokenError?.code,
-              errorDetails: tokenError?.details,
-              errorHint: tokenError?.hint,
-              hasData: !!tokenData,
-              dataLength: tokenData?.length,
-              projectSlug: project.slug,
-              userId: user?.id,
-            });
-            
-            // Tratamento específico para erros comuns
-            let errorMessage = 'Token SSO não pôde ser gerado. Você pode precisar fazer login no módulo.';
-            
-            if (tokenError?.code === 'PGRST116') {
-              errorMessage = `Projeto "${project.nome}" não encontrado. Verifique se o slug "${project.slug}" está correto.`;
-            } else if (tokenError?.message?.includes('não autenticado')) {
-              errorMessage = 'Sua sessão expirou. Por favor, faça login novamente.';
-            } else if (tokenError?.message?.includes('não encontrado')) {
-              errorMessage = `Projeto "${project.nome}" não encontrado no sistema.`;
-            } else if (tokenError?.message) {
-              errorMessage = `Erro ao gerar token: ${tokenError.message}`;
+        } else {
+          // Token não existe ou expirou - gerar novo
+          console.log('🔵 Token pré-gerado não encontrado ou expirado, gerando novo...');
+          try {
+            const tokenData = await generateSSOTokenForModule(project.slug);
+            if (tokenData) {
+              ssoToken = tokenData.token;
+              console.log('✅ Novo token SSO gerado:', {
+                project: project.nome,
+                expiresAt: tokenData.expires_at,
+              });
+            } else {
+              console.warn('⚠️ Falha ao gerar novo token SSO');
             }
-            
-            toast({
-              title: 'Erro ao gerar token SSO',
-              description: errorMessage,
-              variant: 'destructive',
-              duration: 5000,
-            });
-            
-            // Continuar mesmo sem token - o módulo pode pedir login
-            console.warn('⚠️ Continuando sem token SSO - o módulo pode solicitar autenticação manual');
+          } catch (tokenErr) {
+            console.error('❌ Erro ao gerar token SSO:', tokenErr);
+            // Continua mesmo sem token - o módulo pode pedir login
           }
-        } catch (tokenErr) {
-          console.error('❌ Erro ao gerar token SSO:', tokenErr);
-          // Continua mesmo sem token - o módulo pode pedir login
+        }
+
+        if (ssoToken) {
+          // Adicionar token à URL
+          url.searchParams.set('sso_token', ssoToken);
+          url.searchParams.set('from', 'arruda-hub');
+          // Adicionar timestamp para evitar cache
+          url.searchParams.set('_t', Date.now().toString());
+          console.log('✅ Token SSO adicionado à URL:', {
+            project: project.nome,
+            hasToken: !!ssoToken,
+            tokenLength: ssoToken?.length,
+          });
+        } else {
+          console.warn('⚠️ Nenhum token SSO disponível - o módulo pode solicitar autenticação manual');
         }
       } else {
         console.warn('⚠️ Usuário não encontrado, não será gerado token SSO');
@@ -553,17 +549,37 @@ const Hub = () => {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.style.display = 'none';
+        
+        // Adicionar ao body de forma síncrona antes de clicar
         document.body.appendChild(link);
         
-        // Triggerar o clique programaticamente
-        link.click();
-        
-        // Remover o link após um delay
-        setTimeout(() => {
-          document.body.removeChild(link);
-        }, 100);
-        
-        console.log('✅ Link aberto via método de clique programático');
+        // Usar requestAnimationFrame para garantir que o DOM está pronto
+        // Isso ajuda a evitar problemas com extensões que interceptam eventos
+        requestAnimationFrame(() => {
+          try {
+            // Triggerar o clique programaticamente
+            link.click();
+            console.log('✅ Link aberto via método de clique programático');
+            
+            // Remover o link após um delay maior para dar tempo de processar
+            setTimeout(() => {
+              try {
+                if (document.body.contains(link)) {
+                  document.body.removeChild(link);
+                }
+              } catch (cleanupError) {
+                // Ignorar erros na limpeza - não é crítico
+                console.debug('Erro ao remover link temporário (não crítico):', cleanupError);
+              }
+            }, 500);
+          } catch (clickError: any) {
+            // Erro ao clicar - pode ser causado por extensões do navegador
+            // Não é crítico se o link já foi processado
+            if (!clickError.message?.includes('message channel closed')) {
+              console.warn('⚠️ Erro ao clicar no link (pode ser extensão do navegador):', clickError);
+            }
+          }
+        });
         
         toast({
           title: 'Abrindo em nova aba',
