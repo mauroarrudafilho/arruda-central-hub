@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ConfirmEmail from "./pages/ConfirmEmail";
+import SetPassword from "./pages/SetPassword";
 import { AuthGuard } from "./components/AuthGuard";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { AuthProvider } from "./hooks/useAuth";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/confirm-email" element={<ConfirmEmail />} />
+              <Route path="/set-password" element={<SetPassword />} />
               <Route path="/hub" element={
                 <AuthGuard>
                   <Hub />
