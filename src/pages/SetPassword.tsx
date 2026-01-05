@@ -119,11 +119,6 @@ const SetPassword = () => {
         description: "Sua senha foi criada com sucesso!",
       });
 
-      // Redirecionar para login após 3 segundos
-      setTimeout(() => {
-        navigate('/auth');
-      }, 3000);
-
     } catch (error) {
       console.error('❌ Erro ao definir senha:', error);
       const errorMessage = error instanceof Error ? error.message : "Erro ao definir senha. Tente novamente.";
@@ -150,24 +145,53 @@ const SetPassword = () => {
                 className="text-2xl font-bold text-gray-900"
                 style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
               >
-                Senha Criada!
+                Senha Criada com Sucesso!
               </h2>
-              <p 
-                className="text-gray-600"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Sua senha foi criada com sucesso. Você será redirecionado para o login em alguns segundos.
-              </p>
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="w-full"
-                style={{ 
-                  backgroundColor: designTokens.colors.primary.DEFAULT,
-                  fontFamily: designTokens.typography.fontFamily.sans.join(', ')
-                }}
-              >
-                Ir para Login
-              </Button>
+              <div className="space-y-3">
+                <p 
+                  className="text-gray-700"
+                  style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                >
+                  Sua senha foi criada com sucesso. Agora você pode acessar o sistema.
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <p 
+                    className="text-sm text-blue-800 mb-2 font-semibold"
+                    style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                  >
+                    Próximo passo:
+                  </p>
+                  <p 
+                    className="text-sm text-blue-700 mb-3"
+                    style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                  >
+                    Você receberá em breve um link de acesso enviado pelo administrador para acessar o sistema comercial.
+                  </p>
+                  <div className="bg-white border border-blue-300 rounded-md p-3 mt-3">
+                    <p 
+                      className="text-xs text-blue-600 mb-2"
+                      style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                    >
+                      Link de acesso:
+                    </p>
+                    <a 
+                      href="https://arruda-sales-boost.vercel.app/" 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-700 hover:text-blue-800 underline break-all"
+                      style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                    >
+                      https://arruda-sales-boost.vercel.app/
+                    </a>
+                  </div>
+                  <p 
+                    className="text-xs text-blue-600 mt-3"
+                    style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
+                  >
+                    Aguarde as instruções por e-mail ou entre em contato com o administrador do sistema.
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
