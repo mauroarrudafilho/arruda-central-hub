@@ -165,27 +165,10 @@ const SetPassword = () => {
                     className="text-sm text-blue-700 mb-3"
                     style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                   >
-                    Você receberá em breve um link de acesso enviado pelo administrador para acessar o sistema comercial.
+                    Você receberá em breve um link de acesso enviado pelo administrador para acessar o sistema.
                   </p>
-                  <div className="bg-white border border-blue-300 rounded-md p-3 mt-3">
-                    <p 
-                      className="text-xs text-blue-600 mb-2"
-                      style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-                    >
-                      Link de acesso:
-                    </p>
-                    <a 
-                      href="https://arruda-sales-boost.vercel.app/" 
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-700 hover:text-blue-800 underline break-all"
-                      style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-                    >
-                      https://arruda-sales-boost.vercel.app/
-                    </a>
-                  </div>
                   <p 
-                    className="text-xs text-blue-600 mt-3"
+                    className="text-xs text-blue-600"
                     style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
                   >
                     Aguarde as instruções por e-mail ou entre em contato com o administrador do sistema.
