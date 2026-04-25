@@ -110,7 +110,7 @@ export const DEFAULT_MODULE_DEFINITIONS: Array<Omit<ProjectModule, 'id' | 'proje
     slug: 'acordo-flow',
     icone: 'FileText',
     rota: null,
-    url_externa: 'https://acordo-flow.vercel.app',
+    url_externa: 'https://portal-fornecedor-ah.vercel.app',
     ativo: true,
     descricao: 'Registro centralizado de investimentos e concessões',
     status: 'disponivel',
