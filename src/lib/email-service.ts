@@ -1,22 +1,21 @@
-import { resend, EmailTemplate } from './resend';
-import { 
-  PasswordResetTemplate, 
-  EmailConfirmationTemplate, 
-  SecurityAlertTemplate, 
-  WelcomeTemplate 
+import { resend, EmailTemplate, EMAIL_CONFIG } from './resend';
+import {
+  PasswordResetTemplate,
+  EmailConfirmationTemplate,
+  SecurityAlertTemplate,
+  WelcomeTemplate,
 } from './email-templates';
 
 export class EmailService {
-  // Enviar e-mail de reset de senha
   static async sendPasswordReset(email: string, resetToken: string, userName: string) {
     try {
       const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`;
       const html = PasswordResetTemplate(resetUrl, userName);
-      
+
       const result = await resend.emails.send({
-        from: 'Arruda Hub <noreply@arrudahub.com>',
+        from: EMAIL_CONFIG.from,
         to: [email],
-        subject: '🔒 Redefinir senha - Arruda Hub',
+        subject: 'Redefinir senha - Arruda Hub',
         html,
       });
 
@@ -28,16 +27,15 @@ export class EmailService {
     }
   }
 
-  // Enviar e-mail de confirmação
   static async sendEmailConfirmation(email: string, confirmToken: string, userName: string) {
     try {
       const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/confirm-email?token=${confirmToken}`;
       const html = EmailConfirmationTemplate(confirmUrl, userName);
-      
+
       const result = await resend.emails.send({
-        from: 'Arruda Hub <noreply@arrudahub.com>',
+        from: EMAIL_CONFIG.from,
         to: [email],
-        subject: '✅ Confirme seu e-mail - Arruda Hub',
+        subject: 'Confirme seu e-mail - Arruda Hub',
         html,
       });
 
@@ -49,15 +47,14 @@ export class EmailService {
     }
   }
 
-  // Enviar alerta de segurança
   static async sendSecurityAlert(email: string, userName: string, activity: string, location: string) {
     try {
       const html = SecurityAlertTemplate(userName, activity, location);
-      
+
       const result = await resend.emails.send({
-        from: 'Arruda Hub <seguranca@arrudahub.com>',
+        from: EMAIL_CONFIG.from,
         to: [email],
-        subject: '🚨 Alerta de Segurança - Arruda Hub',
+        subject: 'Alerta de segurança - Arruda Hub',
         html,
       });
 
@@ -69,16 +66,15 @@ export class EmailService {
     }
   }
 
-  // Enviar e-mail de boas-vindas
   static async sendWelcomeEmail(email: string, userName: string) {
     try {
       const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth`;
       const html = WelcomeTemplate(userName, loginUrl);
-      
+
       const result = await resend.emails.send({
-        from: 'Arruda Hub <bemvindo@arrudahub.com>',
+        from: EMAIL_CONFIG.from,
         to: [email],
-        subject: '🎉 Bem-vindo ao Arruda Hub!',
+        subject: 'Bem-vindo ao Arruda Hub',
         html,
       });
 
@@ -90,11 +86,10 @@ export class EmailService {
     }
   }
 
-  // Enviar e-mail customizado
   static async sendCustomEmail(template: EmailTemplate) {
     try {
       const result = await resend.emails.send({
-        from: template.from || 'Arruda Hub <noreply@arrudahub.com>',
+        from: template.from || EMAIL_CONFIG.from,
         to: [template.to],
         subject: template.subject,
         html: template.html,
@@ -108,4 +103,3 @@ export class EmailService {
     }
   }
 }
-
