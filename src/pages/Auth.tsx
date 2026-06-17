@@ -6,22 +6,24 @@ import { Label } from '@/components/ui/label';
 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const Auth = () => {
   // SOLUÇÃO DEFINITIVA: Usar refs para evitar reloads
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const confirmPasswordRef = useRef<HTMLInputElement>(null);
-  
+  const nomeRef = useRef<HTMLInputElement>(null);
+  const mensagemRef = useRef<HTMLTextAreaElement>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isRequestAccess, setIsRequestAccess] = useState(false);
   const [keepConnected, setKeepConnected] = useState(false);
 
   const { toast } = useToast();
-  const { signIn, signUp, resendConfirmation, user } = useAuth();
+  const { signIn, resendConfirmation, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -49,17 +51,75 @@ const Auth = () => {
   const preserveAllValues = () => {
     return {
       email: emailRef.current?.value || '',
-      password: passwordRef.current?.value || '',
-      confirmPassword: confirmPasswordRef.current?.value || ''
+      password: passwordRef.current?.value || ''
     };
   };
 
-  const restoreAllValues = (values: { email: string; password: string; confirmPassword: string }) => {
+  const restoreAllValues = (values: { email: string; password: string }) => {
     setTimeout(() => {
       if (emailRef.current) emailRef.current.value = values.email;
       if (passwordRef.current) passwordRef.current.value = values.password;
-      if (confirmPasswordRef.current) confirmPasswordRef.current.value = values.confirmPassword;
     }, 0);
+  };
+
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsLoading(true);
+
+    try {
+      const email = emailRef.current?.value || '';
+      const nome = nomeRef.current?.value || '';
+      const mensagem = mensagemRef.current?.value || '';
+
+      if (!email || email.trim() === '') {
+        setIsLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'Campo obrigatório',
+          description: 'Por favor, informe seu e-mail.',
+        });
+        return;
+      }
+
+      // RPC não está nos tipos gerados do Supabase (cast para any de propósito).
+      const { data, error } = await (supabase as any).rpc('solicitar_acesso', {
+        p_email: email,
+        p_nome: nome || null,
+        p_mensagem: mensagem || null,
+        p_app: 'central-hub',
+      });
+
+      if (error) {
+        console.error('❌ Erro ao solicitar acesso:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro',
+          description: 'Não foi possível enviar sua solicitação. Tente novamente.',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Solicitação enviada',
+        description: data?.message || 'Sua solicitação de acesso foi registrada.',
+      });
+
+      // Voltar ao login e limpar o formulário
+      setIsRequestAccess(false);
+      if (emailRef.current) emailRef.current.value = '';
+      if (nomeRef.current) nomeRef.current.value = '';
+      if (mensagemRef.current) mensagemRef.current.value = '';
+    } catch (error: unknown) {
+      console.error('❌ Erro ao solicitar acesso:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro inesperado',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,8 +133,7 @@ const Auth = () => {
       // Usar valores dos refs
       const email = emailRef.current?.value || '';
       const password = passwordRef.current?.value || '';
-      const confirmPassword = confirmPasswordRef.current?.value || '';
-      
+
       console.log('📧 Email:', email);
       console.log('🔐 Password length:', password.length);
 
@@ -96,45 +155,6 @@ const Auth = () => {
           description: "Verifique sua caixa de entrada e spam. O link é válido por 1 hora.",
         });
         setIsForgotPassword(false);
-      } else if (isSignUp) {
-        // Validações para criar conta
-        if (!password || password.length < 6) {
-          setIsLoading(false);
-          toast({
-            variant: "destructive",
-            title: "Senha inválida",
-            description: "A senha deve ter pelo menos 6 caracteres.",
-          });
-          return;
-        }
-        
-        if (password !== confirmPassword) {
-          setIsLoading(false);
-          toast({
-            variant: "destructive",
-            title: "Senhas não coincidem",
-            description: "Por favor, confirme sua senha corretamente.",
-          });
-          return;
-        }
-
-        const result = await signUp(email, password, email.split('@')[0]); // Usar parte do email como nome
-        if (!result.error) {
-          toast({
-            title: "Conta criada com sucesso!",
-            description: "Verifique seu e-mail para confirmar sua conta.",
-          });
-        } else {
-          // CORREÇÃO: Exibir erro de signup
-          console.error('❌ Erro no signup:', result.error);
-          toast({
-            variant: "destructive",
-            title: "Erro ao criar conta",
-            description: result.error.message === 'User already registered'
-              ? "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail."
-              : result.error.message || "Não foi possível criar sua conta. Tente novamente.",
-          });
-        }
       } else {
         // Fluxo de login
         if (!password) {
@@ -181,48 +201,78 @@ const Auth = () => {
     <div className="w-full max-w-md mx-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl tracking-tight text-gray-900 mb-2">
-          {isForgotPassword ? 'Recuperar senha' : 
-           isSignUp ? 'Criar conta gratuita' : 'Bem-vindo de volta'}
+          {isRequestAccess ? 'Solicitar acesso' :
+           isForgotPassword ? 'Recuperar senha' : 'Bem-vindo de volta'}
         </h1>
-        
+
         <p className="text-gray-500 text-sm">
-          {isForgotPassword ? 'Digite seu e-mail para receber as instruções' :
-           isSignUp ? 'Acesse sua conta do Arruda Hub' : 
+          {isRequestAccess ? 'Preencha seus dados para solicitar acesso à plataforma' :
+           isForgotPassword ? 'Digite seu e-mail para receber as instruções' :
            'Acesse sua conta do Arruda Hub'}
         </p>
       </div>
 
       <div className="space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={isRequestAccess ? handleRequestAccess : handleSubmit} className="space-y-6">
         {/* Email */}
                 <div className="space-y-2">
-          <Label htmlFor={isForgotPassword ? "forgot-email" : isSignUp ? "signup-email" : "login-email"} className="text-gray-700">
+          <Label htmlFor={isForgotPassword ? "forgot-email" : "login-email"} className="text-gray-700">
             Email
           </Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              id={isForgotPassword ? "forgot-email" : isSignUp ? "signup-email" : "login-email"}
+              id={isForgotPassword ? "forgot-email" : "login-email"}
               ref={emailRef}
                     type="email"
                     placeholder="seu@email.com"
               className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              key={`email-${showPassword}-${keepConnected}-${isSignUp}-${isForgotPassword}`}
+              key={`email-${showPassword}-${keepConnected}-${isForgotPassword}-${isRequestAccess}`}
                     required
                   />
                 </div>
         </div>
 
+        {/* Request Access: Nome + Mensagem */}
+        {isRequestAccess && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="request-nome" className="text-gray-700">
+                Nome <span className="text-gray-400 text-xs">(opcional)</span>
+              </Label>
+              <input
+                id="request-nome"
+                ref={nomeRef}
+                type="text"
+                placeholder="Seu nome completo"
+                className="h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="request-mensagem" className="text-gray-700">
+                Mensagem <span className="text-gray-400 text-xs">(opcional)</span>
+              </Label>
+              <textarea
+                id="request-mensagem"
+                ref={mensagemRef}
+                rows={3}
+                placeholder="Conte-nos por que precisa de acesso"
+                className="border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          </>
+        )}
+
         {/* Password */}
-        {!isForgotPassword && (
+        {!isForgotPassword && !isRequestAccess && (
           <div className="space-y-2">
-            <Label htmlFor={isSignUp ? "signup-password" : "login-password"} className="text-gray-700">
+            <Label htmlFor="login-password" className="text-gray-700">
               Senha
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                id={isSignUp ? "signup-password" : "login-password"}
+                id="login-password"
                 ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Digite sua senha"
@@ -255,29 +305,8 @@ const Auth = () => {
           </div>
         )}
 
-        {/* Confirm Password */}
-        {isSignUp && !isForgotPassword && (
-                <div className="space-y-2">
-            <Label htmlFor="confirm-password" className="text-gray-700">
-              Confirmar Senha
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="confirm-password"
-                ref={confirmPasswordRef}
-                    type="password"
-                placeholder="Confirme sua senha"
-                className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                key={`confirm-password-${isSignUp}-${isForgotPassword}`}
-                    required
-                  />
-                </div>
-          </div>
-        )}
-
         {/* Keep connected checkbox (only for login) */}
-        {!isSignUp && !isForgotPassword && (
+        {!isForgotPassword && !isRequestAccess && (
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
@@ -317,15 +346,15 @@ const Auth = () => {
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               <span>
-                {isForgotPassword ? 'Enviando...' : 
-                 isSignUp ? 'Criando conta...' : 'Entrando...'}
+                {isRequestAccess ? 'Enviando...' :
+                 isForgotPassword ? 'Enviando...' : 'Entrando...'}
               </span>
             </div>
           ) : (
             <>
               <span>
-                {isForgotPassword ? 'Enviar e-mail de recuperação' :
-                 isSignUp ? 'Criar conta gratuita' : 'Entrar na plataforma'}
+                {isRequestAccess ? 'Enviar solicitação' :
+                 isForgotPassword ? 'Enviar e-mail de recuperação' : 'Entrar na plataforma'}
               </span>
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </>
@@ -336,8 +365,26 @@ const Auth = () => {
 
       {/* Footer Links */}
       <div className="text-center space-y-4 mt-6">
-        {/* Forgot Password / Back to Login */}
-        {isForgotPassword && (
+        {/* Solicitar acesso (apenas na tela de login) */}
+        {!isForgotPassword && !isRequestAccess && (
+          <div className="text-sm text-gray-600">
+            Não tem acesso?{' '}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsRequestAccess(true);
+              }}
+              className="text-blue-600 hover:text-blue-700 transition-colors font-medium"
+            >
+              Solicitar acesso
+            </button>
+          </div>
+        )}
+
+        {/* Forgot Password / Request Access — Back to Login */}
+        {(isForgotPassword || isRequestAccess) && (
           <button
             type="button"
             onClick={(e) => {
@@ -346,6 +393,7 @@ const Auth = () => {
               // PRESERVAR TODOS OS VALORES
               const values = preserveAllValues();
               setIsForgotPassword(false);
+              setIsRequestAccess(false);
               // RESTAURAR TODOS OS VALORES
               restoreAllValues(values);
             }}
@@ -360,31 +408,6 @@ const Auth = () => {
           <Shield className="w-3 h-3 mr-1 text-green-500" />
           Conexão segura SSL
         </div>
-
-        {/* Sign Up Link */}
-        {!isForgotPassword && (
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-3">
-              {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}
-            </p>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // PRESERVAR TODOS OS VALORES
-                const values = preserveAllValues();
-                setIsSignUp(!isSignUp);
-                // RESTAURAR TODOS OS VALORES
-                restoreAllValues(values);
-              }}
-              className="inline-flex items-center justify-center w-full h-12 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 group"
-            >
-              {isSignUp ? 'Fazer login' : 'Criar conta gratuita'}
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        )}
 
         {/* Resend Confirmation Button */}
         {location.state?.requireEmailConfirmation && (
