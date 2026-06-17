@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 // Removido motion para otimizar performance
-import { Eye, EyeOff, Mail, Lock, Shield, ArrowRight, BarChart3, Users, DollarSign, Truck, FileText, Package, GraduationCap, Activity } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Shield, ArrowRight, BarChart3, Users, DollarSign, Truck, FileText, Package, GraduationCap, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +20,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [isRequestAccess, setIsRequestAccess] = useState(false);
+  const [tab, setTab] = useState<'signin' | 'request'>('signin');
   const [keepConnected, setKeepConnected] = useState(false);
 
   const { toast } = useToast();
@@ -106,7 +107,7 @@ const Auth = () => {
       });
 
       // Voltar ao login e limpar o formulário
-      setIsRequestAccess(false);
+      setTab('signin');
       if (emailRef.current) emailRef.current.value = '';
       if (nomeRef.current) nomeRef.current.value = '';
       if (mensagemRef.current) mensagemRef.current.value = '';
@@ -201,190 +202,261 @@ const Auth = () => {
     <div className="w-full max-w-md mx-auto">
       <div className="mb-8 text-center">
         <h1 className="text-3xl tracking-tight text-gray-900 mb-2">
-          {isRequestAccess ? 'Solicitar acesso' :
-           isForgotPassword ? 'Recuperar senha' : 'Bem-vindo de volta'}
+          {isForgotPassword ? 'Recuperar senha' : 'Bem-vindo de volta'}
         </h1>
 
         <p className="text-gray-500 text-sm">
-          {isRequestAccess ? 'Preencha seus dados para solicitar acesso à plataforma' :
-           isForgotPassword ? 'Digite seu e-mail para receber as instruções' :
-           'Acesse sua conta do Arruda Hub'}
+          {isForgotPassword
+            ? 'Digite seu e-mail para receber as instruções'
+            : 'Acesse sua conta do Arruda Hub'}
         </p>
       </div>
 
-      <div className="space-y-6">
-        <form onSubmit={isRequestAccess ? handleRequestAccess : handleSubmit} className="space-y-6">
-        {/* Email */}
-                <div className="space-y-2">
-          <Label htmlFor={isForgotPassword ? "forgot-email" : "login-email"} className="text-gray-700">
-            Email
-          </Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              id={isForgotPassword ? "forgot-email" : "login-email"}
-              ref={emailRef}
+      {isForgotPassword ? (
+        /* RESET / FORGOT PASSWORD — view separada, sem Tabs */
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email" className="text-gray-700">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  id="forgot-email"
+                  ref={emailRef}
+                  type="email"
+                  placeholder="seu@email.com"
+                  className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Enviando...</span>
+                </div>
+              ) : (
+                <>
+                  <span>Enviar e-mail de recuperação</span>
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
+      ) : (
+        /* LOGIN + SOLICITAR ACESSO — Tabs */
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            const values = preserveAllValues();
+            setTab(v as 'signin' | 'request');
+            restoreAllValues(values);
+          }}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="signin">Entrar</TabsTrigger>
+            <TabsTrigger value="request">Solicitar acesso</TabsTrigger>
+          </TabsList>
+
+          {/* LOGIN */}
+          <TabsContent value="signin" className="mt-0">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="login-email" className="text-gray-700">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="login-email"
+                    ref={emailRef}
                     type="email"
                     placeholder="seu@email.com"
-              className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              key={`email-${showPassword}-${keepConnected}-${isForgotPassword}-${isRequestAccess}`}
+                    className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    key={`email-${showPassword}-${keepConnected}`}
                     required
                   />
                 </div>
-        </div>
+              </div>
 
-        {/* Request Access: Nome + Mensagem */}
-        {isRequestAccess && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="request-nome" className="text-gray-700">
-                Nome <span className="text-gray-400 text-xs">(opcional)</span>
-              </Label>
-              <input
-                id="request-nome"
-                ref={nomeRef}
-                type="text"
-                placeholder="Seu nome completo"
-                className="h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="request-mensagem" className="text-gray-700">
-                Mensagem <span className="text-gray-400 text-xs">(opcional)</span>
-              </Label>
-              <textarea
-                id="request-mensagem"
-                ref={mensagemRef}
-                rows={3}
-                placeholder="Conte-nos por que precisa de acesso"
-                className="border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-          </>
-        )}
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="login-password" className="text-gray-700">
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="login-password"
+                    ref={passwordRef}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Digite sua senha"
+                    key={`password-${showPassword}`}
+                    className="pl-10 pr-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-12 px-3 hover:bg-transparent"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      // PRESERVAR TODOS OS VALORES
+                      const values = preserveAllValues();
+                      setShowPassword(!showPassword);
+                      // RESTAURAR TODOS OS VALORES
+                      restoreAllValues(values);
+                    }}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-        {/* Password */}
-        {!isForgotPassword && !isRequestAccess && (
-          <div className="space-y-2">
-            <Label htmlFor="login-password" className="text-gray-700">
-              Senha
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="login-password"
-                ref={passwordRef}
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Digite sua senha"
-                key={`password-${showPassword}`}
-                className="pl-10 pr-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                required
-              />
+              {/* Keep connected + Esqueceu a senha */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    checked={keepConnected}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      // PRESERVAR TODOS OS VALORES
+                      const values = preserveAllValues();
+                      setKeepConnected(e.target.checked);
+                      // RESTAURAR TODOS OS VALORES
+                      restoreAllValues(values);
+                    }}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <label htmlFor="remember" className="ml-2 text-sm text-gray-600 cursor-pointer select-none">
+                    Manter conectado
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const values = preserveAllValues();
+                    setIsForgotPassword(true);
+                    restoreAllValues(values);
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Esqueceu a senha?
+                </button>
+              </div>
+
+              {/* Submit */}
               <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-12 px-3 hover:bg-transparent"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // PRESERVAR TODOS OS VALORES
-                  const values = preserveAllValues();
-                  setShowPassword(!showPassword);
-                  // RESTAURAR TODOS OS VALORES
-                  restoreAllValues(values);
-                }}
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
+                disabled={isLoading}
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Entrando...</span>
+                  </div>
                 ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <>
+                    <span>Entrar na plataforma</span>
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
                 )}
               </Button>
-            </div>
-          </div>
-        )}
+            </form>
+          </TabsContent>
 
-        {/* Keep connected checkbox (only for login) */}
-        {!isForgotPassword && !isRequestAccess && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember"
-                type="checkbox"
-                checked={keepConnected}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  // PRESERVAR TODOS OS VALORES
-                  const values = preserveAllValues();
-                  setKeepConnected(e.target.checked);
-                  // RESTAURAR TODOS OS VALORES
-                  restoreAllValues(values);
-                }}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-              <label htmlFor="remember" className="ml-2 text-sm text-gray-600 cursor-pointer select-none">
-                Manter conectado
-              </label>
-            </div>
-            <Link
-              to="/forgot-password"
-              className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              Esqueceu a senha?
-            </Link>
-          </div>
-        )}
+          {/* SOLICITAR ACESSO */}
+          <TabsContent value="request" className="mt-0">
+            <form onSubmit={handleRequestAccess} className="space-y-6">
+              {/* Email corporativo */}
+              <div className="space-y-2">
+                <Label htmlFor="request-email" className="text-gray-700">
+                  E-mail corporativo
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="request-email"
+                    ref={emailRef}
+                    type="email"
+                    placeholder="seu@empresa.com.br"
+                    className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                </div>
+              </div>
 
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>
-                {isRequestAccess ? 'Enviando...' :
-                 isForgotPassword ? 'Enviando...' : 'Entrando...'}
-              </span>
-            </div>
-          ) : (
-            <>
-              <span>
-                {isRequestAccess ? 'Enviar solicitação' :
-                 isForgotPassword ? 'Enviar e-mail de recuperação' : 'Entrar na plataforma'}
-              </span>
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </>
-          )}
-                </Button>
-              </form>
-      </div>
+              {/* Nome (opcional) */}
+              <div className="space-y-2">
+                <Label htmlFor="request-nome" className="text-gray-700">
+                  Nome <span className="font-normal text-gray-400">(opcional)</span>
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="request-nome"
+                    ref={nomeRef}
+                    type="text"
+                    placeholder="Seu nome completo"
+                    autoComplete="name"
+                    className="pl-10 h-12 border border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 w-full rounded-md bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs leading-relaxed text-gray-500">
+                Após a aprovação, você receberá um e-mail com link para definir sua senha e acessar o sistema.
+              </p>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Enviando...</span>
+                  </div>
+                ) : (
+                  <>
+                    <span>Solicitar acesso</span>
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {/* Footer Links */}
       <div className="text-center space-y-4 mt-6">
-        {/* Solicitar acesso (apenas na tela de login) */}
-        {!isForgotPassword && !isRequestAccess && (
-          <div className="text-sm text-gray-600">
-            Não tem acesso?{' '}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsRequestAccess(true);
-              }}
-              className="text-blue-600 hover:text-blue-700 transition-colors font-medium"
-            >
-              Solicitar acesso
-            </button>
-          </div>
-        )}
-
-        {/* Forgot Password / Request Access — Back to Login */}
-        {(isForgotPassword || isRequestAccess) && (
+        {/* Forgot Password — Back to Login */}
+        {isForgotPassword && (
           <button
             type="button"
             onClick={(e) => {
@@ -393,7 +465,6 @@ const Auth = () => {
               // PRESERVAR TODOS OS VALORES
               const values = preserveAllValues();
               setIsForgotPassword(false);
-              setIsRequestAccess(false);
               // RESTAURAR TODOS OS VALORES
               restoreAllValues(values);
             }}
