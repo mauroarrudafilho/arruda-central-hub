@@ -37,6 +37,16 @@ const Auth = () => {
     }
   }, [user, navigate, from]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('reset') === 'success') {
+      toast({
+        title: 'Senha redefinida com sucesso!',
+        description: 'Faça login com a nova senha.',
+      });
+    }
+  }, [location.search, toast]);
+
   // Verificar se precisa mostrar aviso de confirmação de email
   useEffect(() => {
     if (location.state?.requireEmailConfirmation) {
@@ -150,7 +160,15 @@ const Auth = () => {
       }
 
       if (isForgotPassword) {
-        // Fluxo de recuperação de senha
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          "send-reset-password",
+          { body: { email: email.trim(), product: "hub" } },
+        );
+        if (fnError) throw fnError;
+        const result = fnData as { success?: boolean; error?: string };
+        if (result?.success === false && result?.error) {
+          throw new Error(result.error);
+        }
         toast({
           title: "E-mail de recuperação enviado!",
           description: "Verifique sua caixa de entrada e spam. O link é válido por 1 hora.",

@@ -1,279 +1,253 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { useDesignTokens } from '@/hooks/useDesignTokens';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2, Eye, EyeOff, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
-const ResetPassword = () => {
-  const [searchParams] = useSearchParams();
+const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "Mínimo 8 caracteres")
+      .regex(/[A-Z]/, "Uma letra maiúscula")
+      .regex(/[a-z]/, "Uma letra minúscula")
+      .regex(/[0-9]/, "Um número")
+      .regex(/[^A-Za-z0-9]/, "Um caractere especial"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
+
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+export default function ResetPassword() {
   const navigate = useNavigate();
-  const designTokens = useDesignTokens();
-  
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [searchParams] = useSearchParams();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
 
-  const token = searchParams.get('token');
+  const form = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
 
-  const validatePassword = (pwd: string) => {
-    const minLength = pwd.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(pwd);
-    const hasLowerCase = /[a-z]/.test(pwd);
-    const hasNumbers = /\d/.test(pwd);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
-    
-    return {
-      minLength,
-      hasUpperCase,
-      hasLowerCase,
-      hasNumbers,
-      hasSpecialChar,
-      isValid: minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+  useEffect(() => {
+    const validateToken = async () => {
+      try {
+        const token = searchParams.get("token");
+        const email = searchParams.get("email");
+
+        if (token && email) {
+          const { data } = await supabase.functions.invoke("verify-reset-token", {
+            body: { token, email },
+          });
+          const result = data as { success?: boolean; error?: string };
+          if (result?.success !== false) {
+            setTokenValid(true);
+            setIsValidatingToken(false);
+            return;
+          }
+          setError(result?.error ?? "Token de redefinição inválido ou expirado.");
+          setIsValidatingToken(false);
+          return;
+        }
+
+        setError("Token de redefinição inválido ou expirado.");
+      } catch {
+        setError("Token de redefinição inválido ou expirado.");
+      } finally {
+        setIsValidatingToken(false);
+      }
     };
-  };
 
-  const passwordValidation = validatePassword(password);
+    void validateToken();
+  }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!token) {
-      toast({
-        title: "Erro",
-        description: "Token de redefinição inválido ou expirado.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!passwordValidation.isValid) {
-      toast({
-        title: "Erro",
-        description: "A senha não atende aos critérios de segurança.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
+  const handleResetPassword = async (data: ResetPasswordFormData) => {
+    setError("");
+    setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
+      const token = searchParams.get("token");
+      const email = searchParams.get("email");
 
-      if (error) throw error;
+      if (!token || !email) {
+        throw new Error("Token não encontrado na URL.");
+      }
 
-      setSuccess(true);
-      
-      toast({
-        title: "Sucesso",
-        description: "Sua senha foi redefinida com sucesso!",
-      });
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        "verify-reset-token",
+        { body: { token, email, newPassword: data.password } },
+      );
 
-      // Redirecionar para login após 3 segundos
-      setTimeout(() => {
-        navigate('/auth');
-      }, 3000);
+      if (fnError) throw fnError;
 
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao redefinir senha. Tente novamente.",
-        variant: "destructive",
-      });
+      const result = fnData as { success?: boolean; error?: string };
+      if (result?.success === false && result?.error) {
+        throw new Error(result.error);
+      }
+
+      navigate("/auth?reset=success", { replace: true });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Erro ao redefinir senha. Tente novamente.";
+      setError(msg);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  if (success) {
+  const password = form.watch("password");
+
+  const requirements = [
+    { met: (password?.length ?? 0) >= 8, text: "Mínimo 8 caracteres" },
+    { met: /[A-Z]/.test(password || ""), text: "Uma letra maiúscula" },
+    { met: /[a-z]/.test(password || ""), text: "Uma letra minúscula" },
+    { met: /[0-9]/.test(password || ""), text: "Um número" },
+    { met: /[^A-Za-z0-9]/.test(password || ""), text: "Um caractere especial" },
+  ];
+
+  if (isValidatingToken) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-              <h2 
-                className="text-2xl font-bold text-gray-900"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Senha Redefinida!
-              </h2>
-              <p 
-                className="text-gray-600"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Sua senha foi alterada com sucesso. Você será redirecionado para o login em alguns segundos.
-              </p>
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="w-full"
-                style={{ 
-                  backgroundColor: designTokens.colors.primary.DEFAULT,
-                  fontFamily: designTokens.typography.fontFamily.sans.join(', ')
-                }}
-              >
-                Ir para Login
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Validando token...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-4">
+          <Alert variant="destructive">
+            <AlertDescription>
+              {error || "Token de redefinição inválido ou expirado."}
+            </AlertDescription>
+          </Alert>
+          <Button variant="outline" className="w-full" onClick={() => navigate("/auth")}>
+            Voltar para Login
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-blue-600" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+            <Lock className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle 
-            className="text-2xl font-bold"
-            style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-          >
-            Redefinir Senha
-          </CardTitle>
-          <p 
-            className="text-gray-600"
-            style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-          >
-            Digite sua nova senha abaixo
-          </p>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label 
-                htmlFor="new-password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Nova Senha
-              </label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite sua nova senha"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-              
-              {/* Validação de senha */}
-              {password && (
-                <div className="mt-2 space-y-1">
-                  <div className={`flex items-center text-xs ${passwordValidation.minLength ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${passwordValidation.minLength ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                    Mínimo 8 caracteres
-                  </div>
-                  <div className={`flex items-center text-xs ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${passwordValidation.hasUpperCase ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                    Uma letra maiúscula
-                  </div>
-                  <div className={`flex items-center text-xs ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${passwordValidation.hasLowerCase ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                    Uma letra minúscula
-                  </div>
-                  <div className={`flex items-center text-xs ${passwordValidation.hasNumbers ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${passwordValidation.hasNumbers ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                    Um número
-                  </div>
-                  <div className={`flex items-center text-xs ${passwordValidation.hasSpecialChar ? 'text-green-600' : 'text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${passwordValidation.hasSpecialChar ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                    Um caractere especial
-                  </div>
-                </div>
-              )}
-            </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Redefinir senha</h1>
+          <p className="text-sm text-muted-foreground">Digite sua nova senha abaixo</p>
+        </div>
 
-            <div>
-              <label 
-                htmlFor="confirm-password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-                style={{ fontFamily: designTokens.typography.fontFamily.sans.join(', ') }}
-              >
-                Confirmar Senha
-              </label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirme sua nova senha"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-              {confirmPassword && password !== confirmPassword && (
-                <p className="text-red-600 text-xs mt-1">As senhas não coincidem</p>
-              )}
-            </div>
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            <Button
-              type="submit"
-              disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
-              className="w-full"
-              style={{ 
-                backgroundColor: designTokens.colors.primary.DEFAULT,
-                fontFamily: designTokens.typography.fontFamily.sans.join(', ')
-              }}
-            >
-              {loading ? 'Redefinindo...' : 'Redefinir Senha'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <form onSubmit={form.handleSubmit(handleResetPassword)} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="password">Nova senha</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                className="h-11 pr-10"
+                {...form.register("password")}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {form.formState.errors.password && (
+              <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+            )}
+          </div>
+
+          {password && (
+            <ul className="space-y-1 rounded-lg bg-muted/50 p-3">
+              {requirements.map((req) => (
+                <li
+                  key={req.text}
+                  className={`text-xs flex items-center gap-2 ${
+                    req.met ? "text-green-600" : "text-muted-foreground"
+                  }`}
+                >
+                  <span>•</span>
+                  {req.text}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar senha</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="••••••••"
+                className="h-11 pr-10"
+                {...form.register("confirmPassword")}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {form.formState.errors.confirmPassword && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full h-11" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Redefinindo...
+              </>
+            ) : (
+              "Redefinir senha"
+            )}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <Button variant="ghost" onClick={() => navigate("/auth")}>
+            Voltar para Login
+          </Button>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default ResetPassword;
+}

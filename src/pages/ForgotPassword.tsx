@@ -30,11 +30,15 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        "send-reset-password",
+        { body: { email: email.trim(), product: "hub" } },
+      );
+      if (fnError) throw fnError;
+      const result = fnData as { success?: boolean; error?: string };
+      if (result?.success === false && result?.error) {
+        throw new Error(result.error);
+      }
 
       // Log de solicitação de reset de senha
       await securityLogger.log({
