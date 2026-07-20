@@ -1,5 +1,8 @@
 # arruda-central-hub - Progresso do Projeto
 
+
+### ✓ @arruda/tracking 0.2.1 (2026-07-20)
+- [x] Re-vendor `@arruda/tracking@0.2.1` (flush keepalive + retry JWT) — corrige perda de page views no unload
 ## Status Geral
 
 **Fase**: Produção  
