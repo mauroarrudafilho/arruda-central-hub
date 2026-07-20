@@ -3,12 +3,17 @@
 ## Status Geral
 
 **Fase**: Produção  
-**Data da Última Atualização**: 2026-07-15  
+**Data da Última Atualização**: 2026-07-19  
 **Versão Atual**: 1.0.0
 
 ---
 
 ## Concluído (recente)
+
+### Analytics frequência — `@arruda/tracking` (2026-07-19)
+- [x] Dep `@arruda/tracking` (link local → rbac-master/packages/tracking)
+- [x] `initTracking` em `main.tsx` (`projectSlug: arruda-central-hub`, mode `frequency`)
+- [x] `useTrackPageView()` em `AuthGuard` (rotas autenticadas dentro do Router)
 
 ### Reset de senha via edge unificada (2026-07-15)
 - [x] Auth + ForgotPassword chamam `send-reset-password` com `product: "hub"`

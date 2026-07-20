@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useLocation } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { useTrackPageView } from '@arruda/tracking/react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface AuthGuardProps {
 export const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const { user, loading, isAdmin, adminChecked } = useAuth();
   const location = useLocation();
+  useTrackPageView();
 
   // Se ainda está carregando, mostrar spinner
   if (loading || (requireAdmin && !adminChecked)) {
