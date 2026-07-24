@@ -8,9 +8,10 @@
 **arruda-central-hub** é o projeto mais crítico do ecossistema ArrudaHub. Funciona como o **gateway centralizado de autenticação SSO (Single Sign-On) e RBAC (Role-Based Access Control)** para todos os 10+ projetos conectados. É o provedor de identidade e autorização que permite que usuários façam login uma única vez e acessem todos os aplicativos do ecossistema com permissões granulares.
 
 **Status**: Produção  
-**Stack**: React 18 + TypeScript + Vite + Tailwind + shadcn/ui + Supabase  
-**Deploy**: Vercel  
-**GitHub**: https://github.com/mauroarrudafilho/arruda-central-hub.git
+**Stack**: React 18 + TypeScript + Vite + Tailwind + shadcn/ui + Supabase + React Router v6  
+**Deploy**: Vercel (`arruda-central-hub.vercel.app`)  
+**GitHub**: https://github.com/mauroarrudafilho/arruda-central-hub.git  
+**RBAC canônico**: políticas e matriz granular vivem em `arruda-rbac-master`; o hub consome `rbac_*` via Supabase compartilhado.
 
 ---
 
@@ -79,10 +80,12 @@ arruda-central-hub/
 │   │   ├── sso-token-manager.ts  # Gerenciador de pré-geração de tokens
 │   │   └── supabase-client.ts
 │   ├── pages/
-│   │   ├── Auth.tsx         # Página de login
-│   │   ├── SSORedirect.tsx  # Callback de retorno do login SSO
-│   │   ├── Dashboard.tsx    # Dashboard principal
-│   │   └── AdminUsers.tsx   # Gestão de usuários e roles
+│   │   ├── Auth.tsx         # Login (Supabase Auth)
+│   │   ├── Hub.tsx          # Launcher de apps/módulos (pós-login)
+│   │   ├── Redirect.tsx     # Redirecionamento SSO para app externo
+│   │   ├── SSORedirect.tsx  # Callback SSO
+│   │   ├── Profile.tsx      # Perfil do usuário
+│   │   ├── ForgotPassword.tsx / ResetPassword.tsx / SetPassword.tsx / ConfirmEmail.tsx
 │   ├── services/            # Camada de negócio (Supabase queries)
 │   └── shared-lib/          # Biblioteca compartilhada com todos os projetos
 │       ├── types/           # Tipos TypeScript exportados
@@ -112,57 +115,25 @@ arruda-central-hub/
 4. Armazena token em localStorage
 5. Redireciona para a URL original (query param `redirect_to`)
 
-**Endpoints**:
-- `POST /api/auth/login` - Autenticação (Supabase Auth)
-- `POST /api/auth/logout` - Revogação de sessão
-- `POST /api/sso/token` - Gera JWT para consumo por apps externos
-- `GET /api/sso/public-key` - Retorna chave pública para validação de token
+**Reset de senha (edge unificada):** `ForgotPassword` → Edge `send-reset-password` (`product: "hub"`); `/reset-password` valida via `verify-reset-token` (mesmo fluxo multi-app).
 
-### 2. RBAC - Gestão de Roles e Permissões
+### 2. RBAC - Roles e Permissões
 
-**Schema do Banco**:
+Roles e policies são geridas no **`arruda-rbac-master`**. O hub lê o catálogo via Supabase:
 
-**Tabela `auth_users`** (Supabase Auth):
-- Identidade padrão do Supabase Auth
-- Campos: `id` (uuid), `email`, `created_at`, etc.
+| Tabela | Uso no hub |
+|--------|------------|
+| `rbac_auth_profile` | Perfil do usuário autenticado |
+| `rbac_auth_user_role` + `rbac_auth_role` | Role efetiva (`useAuth` → `isAdmin` quando `nome === 'admin'`) |
+| `rbac_projects` | Cards de apps no launcher (`Hub.tsx`) |
+| `rbac_project_modules` + `rbac_modules` | Módulos por projeto (`useProjects`) |
 
-**Tabela `public.users_roles`** (Custom):
-- `id` (uuid, PK)
-- `user_id` (uuid, FK → auth.users)
-- `role` (text): ADMIN, MANAGER, USER, VIEWER
-- `assigned_by` (uuid): Quem atribuiu a role
-- `assigned_at` (timestamp)
+**Não editar policies `rbac_*` neste repo** — registrar mudanças em `arruda-rbac-master/LESSONS.md`.
 
-**Tabela `public.role_permissions`** (Custom):
-- `id` (uuid, PK)
-- `role` (text): Nome da role
-- `permission` (text): Ex. "read:finances", "write:users", "admin:config"
-- `description` (text)
+### 3. Launcher de Apps (Hub)
 
-**Exemplo de Roles**:
-```
-ADMIN: Acesso total, gestão de usuários, configuração de apps
-MANAGER: Acesso a dados financeiros, relatórios, sem gestão de usuários
-USER: Acesso a próprios dados, leitura de relatórios públicos
-VIEWER: Apenas leitura de dados compartilhados
-```
-
-### 3. Gestão de Apps Conectados
-
-**Tabela `public.apps_conectados`**:
-- `id` (uuid, PK)
-- `slug` (text, UNIQUE): Identificador do app (ex. "arruda-flow-buddy")
-- `name` (text): Nome exibição (ex. "Arruda Flow Buddy")
-- `url` (text): URL base do app
-- `sso_enabled` (boolean): Se SSO está ativo
-- `shared_lib_version` (text): Versão de shared-lib esperada
-- `created_by` (uuid): Admin que registrou
-
-**Dashboard de Admin**:
-- Listar todos os apps conectados
-- Ativar/desativar SSO por app
-- Configurar versionamento de shared-lib
-- Visualizar tokens gerados e expirados
+**Tabelas `rbac_projects` / `rbac_project_modules`**: slug, URL Vercel, ícone, rota de módulo.  
+`sso-token-manager.ts` pré-gera tokens por `project_slug` após login e persiste em `localStorage` (`arruda_sso_tokens`).
 
 ### 4. Shared-lib - Biblioteca Compartilhada
 
@@ -231,27 +202,23 @@ VITE_GITHUB_CLIENT_ID=...
 
 ---
 
-## Rotas Principais
+## Rotas Principais (React Router — SPA)
 
-### Públicas (sem autenticação)
-- `GET /` - Homepage
-- `GET /auth` - Página de login
-- `POST /api/auth/login` - Endpoint de login
-- `GET /api/sso/public-key` - Chave pública para validação de tokens
-- `GET /health` - Health check
+| Rota | Acesso | Componente |
+|------|--------|------------|
+| `/` | Público | Redirect → `/auth` |
+| `/auth` | Público | Login Supabase Auth |
+| `/forgot-password` | Público | Solicitar reset |
+| `/reset-password` | Público | Nova senha (`verify-reset-token`) |
+| `/confirm-email` | Público | Confirmação de e-mail |
+| `/set-password` | Público | Definir senha (convite) |
+| `/sso-redirect` | Público | Callback SSO para apps |
+| `/hub` | Autenticado (`AuthGuard`) | Launcher de apps/módulos |
+| `/redirect` | Autenticado | Redireciona para app com token SSO |
+| `/profile` | Autenticado | Perfil do usuário |
+| `*` | — | `NotFound` |
 
-### Protegidas (requer autenticação)
-- `GET /dashboard` - Dashboard principal do hub
-- `GET /admin/users` - Gestão de usuários (requer ADMIN role)
-- `GET /admin/roles` - Gestão de roles (requer ADMIN role)
-- `GET /admin/apps` - Gestão de apps conectados (requer ADMIN role)
-- `GET /admin/audit-log` - Log de acessos (requer ADMIN role)
-
-### APIs Internas
-- `POST /api/sso/generate-token` - Gera token para app específico
-- `POST /api/sso/revoke-token` - Revoga token (logout)
-- `GET /api/users/me` - Dados do usuário autenticado
-- `PUT /api/users/:id/roles` - Atualiza roles do usuário
+**Dev:** `npm run dev` — porta Vite default 5173.
 
 ---
 
@@ -415,9 +382,12 @@ console.log(payload);  // Ver claims do token
 
 ## Próximos Passos (Roadmap)
 
-- **MFA (Multi-Factor Authentication)**: TOTP ou SMS
-- **Dashboard avançado de admin**: CRUD de usuários via GUI
-- **Gestão de permissões granulares**: Per-table/per-row
-- **Auditoria detalhada**: Log de todas as ações em produção
-- **OAuth 2.0 para apps terceiros**: Integração externa segura
+Ver `PROGRESS.md` / `ROADMAP.md`. Backlog imediato: GUI admin de usuários no hub, MFA, auditoria detalhada.
 
+---
+
+## Contexto cross-app (Graphify + Obsidian)
+
+- **Nota Obsidian:** `01 - Projetos/Arruda Central Hub.md` no vault `arruda_hub`.
+- **Grafo Hub:** `/Users/mauro/arrudahub/graphify-out/` — blast radius antes de mudanças que toquem SSO, RLS, RPC compartilhada ou contratos entre apps.
+- **Ritual:** ver `AGENTS.md` §2 (`CHECKPOINT` / `DEPLOY`) — atualizar este `CLAUDE.md` + `PROGRESS.md` no mesmo ritual quando o contexto mudar.

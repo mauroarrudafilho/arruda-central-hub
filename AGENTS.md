@@ -33,10 +33,13 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 | MCP | Para quê | Quando NÃO usar |
 |---|---|---|
 | **Supabase** | `execute_sql`, `apply_migration`, `list_tables`, `get_logs`, `search_docs`, `list_migrations` | Operações destrutivas em produção sem autorização explícita |
+| **Obsidian** | Ler/escrever vault `arruda_hub` (notas de projeto, Decisões, HOME) no ritual CHECKPOINT/DEPLOY | Dumpar specs/SQL inteiros no vault; código-fonte do repo |
+
+**Graphify (CLI local, não MCP):** grafo do ecossistema em `/Users/mauro/arrudahub/graphify-out/`. Usar `graphify query` / `path` / `--update` para blast radius cross-app. Ver §2 CHECKPOINT passo Graphify.
 
 **Regra de ouro:** para **qualquer** coisa de DB do ecossistema (Supabase), usar o MCP diretamente. Não peça credenciais, não assuma que não tem acesso — verifique primeiro.
 
-Outros MCPs (Gmail, Calendar, navegação web, controle de desktop, etc.) podem existir no ambiente do agente, mas **não são oficializados ainda** neste runbook — serão avaliados caso a caso antes de entrar nesta tabela.
+Outros MCPs (Gmail, Calendar, navegação web, etc.) podem existir no ambiente — avaliar caso a caso antes de oficializar nesta tabela.
 
 ---
 
@@ -46,28 +49,49 @@ Quando o usuário disparar um destes acronyms (em maiúscula, minúscula ou mist
 
 ### `CHECKPOINT`
 
-Salva estado sem publicar. Usado para pontos de parada ou fim de tarefa sem deploy.
+Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de parada ou fim de tarefa sem deploy.
 
 1. Verificar `git status` — o que mudou.
-2. Atualizar `PROGRESS.md` do(s) projeto(s) tocados com o que foi entregue (checkbox + 1 linha).
-3. Se aprendeu algo (armadilha, decisão técnica, workaround), adicionar entrada em `LESSONS.md`.
-4. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
-5. `git commit` com mensagem conventional PT-BR (ver §3).
-6. `git push`.
-7. Responder com: commit hash + resumo 1 linha.
+2. **Auditoria de contexto** do(s) projeto(s) tocados: `CLAUDE.md`, `PROGRESS.md`, `LESSONS.md` (e `ROADMAP.md` se a entrega mudar direção) devem refletir o que esta sessão entregou. Se `CLAUDE.md` estiver obsoleto, corrigir neste ritual.
+3. Atualizar `PROGRESS.md` do(s) projeto(s) tocados (checkbox + 1 linha) — obrigatório.
+4. Se aprendeu algo (armadilha, decisão técnica, workaround), adicionar entrada em `LESSONS.md`.
+5. **Alinhar `CLAUDE.md` do projeto** (rotas, schema, integrações, status) com o estado real.
+6. Se a mudança for **transversal** ao ecossistema: atualizar `AGENTS.md` / `SHARED_RULES.md` / `CLAUDE.md` na **raiz do ArrudaHub** e rodar `./sync-agents.sh` (depois commitar `AGENTS.md` em cada Ripple afetado pela cópia).
+7. **Obsidian (MCP, vault `arruda_hub`):** atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Se MCP offline: avisar e listar o que faltou — não bloquear commit.
+8. **Graphify (Hub):** na raiz ArrudaHub, `graphify` `--update` no corpus docs quente + código/migrations do app tocado. Saídas em `graphify-out/`. Se falhar: avisar “grafo stale” — não bloquear commit. Snapshot versionável (`graph.json`, `GRAPH_REPORT.md`) → copiar para `arruda-rbac-master/docs/graphify/` quando o grafo mudar de forma relevante.
+9. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
+10. `git commit` com mensagem conventional PT-BR (ver §3).
+11. `git push`.
+12. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian/Graphify` (ou falha parcial explícita).
+
+**Gate anti-staleness (antes do commit):** (a) `CLAUDE.md` descreve o módulo tocado? (b) `PROGRESS` reflete o estado real? (c) decisão afeta outro app? → `graphify query`/`path` + nota em Decisões. Divergência clara em CLAUDE/PROGRESS **bloqueia** o commit até corrigir.
 
 ### `DEPLOY`
 
 Ritual completo de entrega: roda `CHECKPOINT` inteiro + dispara deploy Vercel.
 
-1–6. Idêntico ao `CHECKPOINT`.
-7. Se a entrega inclui features ou correções visíveis ao usuário, adicionar entrada na rota `/novidades` do projeto — seguindo obrigatoriamente as regras do §7.1 abaixo.
-8. Disparar deploy. Duas opções:
+1–11. Idênticos ao `CHECKPOINT` (incluindo Obsidian + Graphify + gate).
+12. Se a entrega inclui features ou correções visíveis ao usuário, adicionar entrada na rota `/novidades` do projeto — seguindo obrigatoriamente as regras do §7.1 abaixo (texto aprovado pelo usuário antes de commitar).
+13. Disparar deploy. Duas opções:
    - Se o projeto tem CI configurado em `main`, bastou `git push` — responder com link do dashboard Vercel.
    - Se precisa rodar `vercel --prod` localmente, executar e aguardar.
-9. Responder com: commit hash + URL do preview/produção + resumo 1 linha.
+14. Responder com: commit hash + URL do preview/produção + resumo 1 linha + `contexto sync: …`.
 
 **Se `CHECKPOINT` ou `DEPLOY` disparar hook pre-commit que falha:** parar, reportar o erro, **não** fazer `--no-verify`, **não** fazer `--amend`. Resolver e criar novo commit.
+
+### `PULSE`
+
+Pulso diário de estabilidade (Sentry × PostHog × Supabase). Objetivo: decidir no máximo 3 correções do dia seguinte — não inventar produto. Detalhe operacional e harness SQL vivem no `arruda-rbac-master` (`scripts/harness_public_links_security.sql`, SEC-004 / §8.6).
+
+1. Harness de links públicos no Supabase (via MCP no projeto rbac / instância compartilhada). `FAIL` = ação; `WARN` só com sintoma de usuário.
+2. Sentry: `permission denied` / `42501` / Platform unavailable nas últimas 24h (priorizar `degusta-go` e `sales-boost`).
+3. PostHog: outages reais (`query_error` / `http_error` / `manual_outage`), bursts, exceptions — não escalar só com `network`/`timeout`.
+4. Supabase logs: `42501` / `permission denied` em helpers de sessão e RPCs públicas.
+5. Classificar **VERDE / AMARELO / VERMELHO** (≥2 fontes alinhadas; harness FAIL já conta).
+6. Relatório curto no Slack/chat: Status · Sinais · Cruzamento · Ações amanhã (≤3) · Ignorar.
+7. Sem migration destrutiva / RLS sem autorização além do PULSE.
+
+Automação: diário **19:00 America/Sao_Paulo** → `#degusta-go-bugs`.
 
 ---
 
@@ -125,6 +149,9 @@ docs(agents): registra rituais CHECKPOINT e DEPLOY
 
 - Migration **destrutiva** (`DROP`, `TRUNCATE`, `ALTER COLUMN ... TYPE`, `UPDATE` sem `WHERE` específico, `DELETE`).
 - Mexer em RLS de qualquer tabela (criar, alterar, remover policy).
+- Criar função `SECURITY DEFINER` (requer revisão de search_path e necessidade real).
+- Conceder qualquer permissão ao role `anon` (sempre questionar se o dado é realmente público).
+- Revogar grants de roles (`REVOKE` em `authenticated`, `anon`, `public`).
 - Deletar/renomear tabela, coluna ou função pública.
 - Alterar contrato entre apps (RPC compartilhada, schema de evento, formato de token).
 - Mexer em `rbac_auth_*`, `rbac_organizations`, `rbac_permissions` de forma estrutural.
@@ -198,7 +225,27 @@ O bug "dia -1" é o mais clássico do stack. Origem: `new Date('2026-04-15')` em
 - **Supabase client:** `.toISOString()` preserva UTC corretamente; não mexer.
 - **Ao criar nova coluna de data:** decidir entre `date` (puro) ou `timestamptz` (momento no tempo) antes de escrever a migration.
 
-### 6.4 Números fracionários genéricos
+### 6.4 Coluna `date` e strings `YYYY-MM-DD` — harness anti-regressão (off-by-one)
+
+Complemento ao §6.3: valores **só-dia** vindos do Postgres (PostgREST retorna como `YYYY-MM-DD`) **não representam um instante com fuso**. `new Date("2026-05-10")` e `parseISO("2026-05-10")` tratam como **meia-noite UTC**; em **America/Sao_Paulo** o calendário local pode mostrar **o dia anterior**. Afeta exibição, filtros, "hoje" / "vencido", ordenação e exportação.
+
+**Regras obrigatórias (todos os projetos):**
+
+- **Não** formatar campo **`date`** ou string estritamente `YYYY-MM-DD` usando só `new Date(...)` ou `format(parseISO(...))` sem ramo explícito para literal só-dia.
+- **Comparar** dias civis com chave **`yyyy-MM-dd`** (ordem lexicográfica) ou helpers do projeto que implementem essa semântica — **não** `isToday(parseISO(ymd))` / `startOfDay(parseISO(ymd))` em cima de date-only sem tratamento.
+- **"Hoje" e "vencido" no produto BR:** quando a regra for dia civil no app, alinhar ao fuso documentado do projeto (padrão ecossistema: **America/Sao_Paulo** via `date-fns-tz`, não depender do fuso da máquina do dev ou do CI).
+- **Timestamptz** (momento real): usar `parseISO` + formatação/comparação no fuso acordado (ver §6.3). Não misturar no mesmo caminho date-only e instante sem `if`/helper.
+- **Exportação** (CSV/XLSX): mesma semântica de calendário que a tela para colunas de data; evitar `toLocaleDateString()` sem timezone explícito.
+
+**Checklist (PR / agente):**
+
+- [ ] Campo é **`date`** ou sempre `YYYY-MM-DD`? → proibido depender só de `new Date(campo)` para UI.
+- [ ] Há "é hoje?" / "vencido?" / range por dia? → comparação por `yyyy-MM-dd` ou helper de calendário do app.
+- [ ] Teste com **pelo menos** um valor `YYYY-MM-DD` que falharia com `parseISO` + `format` ingênuos; preferir `vi.setSystemTime` com offset explícito (ex. `-03:00`) e, se o app fixar SP, um caso borda UTC ↔ calendário SP.
+
+**Frase-resumo para colar em runbooks de projeto:** *Strings `YYYY-MM-DD` / colunas `date`: nunca formatar nem classificar só com `new Date` ou `parseISO` sem ramo específico; comparar chaves `yyyy-MM-dd` ou helpers + fuso SP conforme este runbook.*
+
+### 6.5 Números fracionários genéricos
 
 `new Intl.NumberFormat('pt-BR').format(1234.56)` → `"1.234,56"`. Sempre pt-BR no display, sempre ponto decimal no banco.
 
@@ -269,6 +316,10 @@ Agregado dos `LESSONS.md` dos 11 projetos. **Antes de mexer numa área, cheque s
 - **RLS só funciona com `ENABLE ROW LEVEL SECURITY` explícito.** (central-hub, commercial-core, degusta) → sempre ativar antes de criar policy.
 - **`organizacao_id` ausente em RLS = vazamento cross-tenant.** (cross-project) → toda tabela de negócio deve ter a coluna + policy filtrando.
 - **Tokens opacos vs JWT para acesso público.** (logistics tracking) → opaco tem `enabled` flag + expiry + logging.
+- **[SEC-001 — 2026-04-28] Role `anon` com grants sem RLS = exposição total ao público.** Auditoria identificou 24 tabelas (incluindo `password_reset_tokens`, `rbac_organizations`, `comercialplus_comissoes`) abertas para a internet. Causa: padrão histórico do Supabase concedia grants ao role `anon` por padrão, sem RLS habilitado. Correção: `migrations/20260428_rls_security_fase1.sql`. Regra permanente: toda tabela nova deve ter RLS habilitado na mesma migration que a cria. Ver `SHARED_RULES.md §8`.
+- **[SEC-002 — 2026-04-28] SECURITY DEFINER sem `SET search_path` = risco de hijacking.** 71 funções com esse problema. Funções privilegiadas executam com permissões do owner do banco — sem search_path fixo, um schema malicioso pode interceptar chamadas. Template obrigatório em `SHARED_RULES.md §8.4`.
+- **[SEC-003 — 2026-04-28] RLS habilitado com ZERO policies = NEGA TUDO (comportamento intencional).** Tabelas internas (`rbac_analytics_events_*`, `rbac_rls_policies`) propositalmente sem policy — service_role bypassa RLS e acessa, usuários não. Não adicionar policies acidentalmente nessas tabelas.
+- **[SEC-004 — 2026-07-24] Policy `TO PUBLIC` + helper SECURITY DEFINER + `REVOKE EXECUTE` = link público 401/`42501`.** Anon avalia policies `PUBLIC` e precisa de `EXECUTE` no helper (`get_promotor_id_*`, `is_admin()`, `is_field_vendedor()`, …). `REVOKE … FROM anon` **não** remove grant via role `PUBLIC` — usar `REVOKE FROM PUBLIC` + allowlist (migration B2). Padrão obrigatório: rota pública via RPC/`Edge` (`SHARED_RULES` §8.6 / §3.1). Ver harness §8.6 e `scripts/harness_public_links_security.sql` no rbac-master.
 
 ### 8.2 Dados e performance
 
@@ -302,6 +353,28 @@ Agregado dos `LESSONS.md` dos 11 projetos. **Antes de mexer numa área, cheque s
 - **Bun vs npm em flow-buddy.** → CI/CD usa Bun; não usar `npm install` (invalida lockfile).
 - **React Query subutilizado em logistics** — migração gradual, components novos já usam.
 - **Zustand sem memoization automática** → usar selectors `useStore(state => state.x)` para evitar re-render desnecessário.
+
+### 8.6 Links públicos / SECURITY DEFINER anon — harness anti-regressão
+
+Complemento ao `SHARED_RULES` §8.6 / §3.1 e à SEC-004. Evita que, ao crescer o catálogo de RPCs e policies, voltem embeds anônimos quebrados ou `EXECUTE` amplo para `anon`.
+
+**Regras obrigatórias:**
+
+- Rota pública nova = RPC `get_*_by_token` / `get_public_*` / `*_public_tracking` (ou Edge `service_role`). Não abrir PostgREST embed anon em tabelas com helpers de sessão.
+- Toda SECURITY DEFINER nova: `SET search_path = public, pg_temp`; `REVOKE EXECUTE … FROM PUBLIC`; `GRANT` só aos roles necessários. `anon` só se estiver na allowlist B2 (nome ou padrão).
+- Policy com helper de sessão (`get_promotor_id_*`, `is_admin()`, `has_role()`, `is_field_vendedor()`, …) → `TO authenticated`, nunca `TO PUBLIC`.
+- Policy residual de token em tabela → `TO anon, authenticated` e `USING` só no token (sem helper).
+- Cliente do app: `supabase.rpc(...)` com anon; smoke sem login + token inválido sem `42501`.
+
+**Checklist (PR / agente / migration):**
+
+- [ ] Superfície pública nova usa RPC/Edge — não `.from(...).select('*, embed(*)')` anônimo.
+- [ ] Nome da RPC bate allowlist B2 (`get_public_%` / `get_%_by_token` / lista explícita em `20260724180300_…b2…sql`).
+- [ ] `REVOKE FROM PUBLIC` na função (não só `FROM anon`).
+- [ ] Nenhuma policy nova `TO PUBLIC` chama helper de sessão.
+- [ ] Rodou `scripts/harness_public_links_security.sql` no rbac-master (via Supabase MCP) e tratou FAIL.
+
+**Frase-resumo:** *Link público = RPC (ou Edge); policy com helper = `TO authenticated`; `REVOKE FROM PUBLIC` + allowlist para anon EXECUTE.*
 
 ---
 
