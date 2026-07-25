@@ -1,6 +1,6 @@
 # ArrudaHub — Agent Runbook
 
-**Este arquivo rege o comportamento de agentes (Claude Code, Cursor, Cowork, Copilot, etc.) em qualquer um dos 11 projetos do ecossistema.** Leia antes de começar qualquer tarefa.
+**Este arquivo rege o comportamento de agentes (Claude Code, Cursor, Cowork, Copilot, etc.) em qualquer um dos 16 projetos do ecossistema.** Leia antes de começar qualquer tarefa.
 
 **Distinção importante:**
 - `SHARED_RULES.md` → regras de **código** (service pattern, RLS, Zod, naming). Mudam devagar.
@@ -12,6 +12,8 @@ Em caso de conflito: `AGENTS.md` para comportamento > `SHARED_RULES.md` para có
 ---
 
 ## 0. Antes de começar qualquer tarefa
+
+0. **Projeto novo, ou dúvida sobre onde algo mora?** Comece por `ECOSSISTEMA.md` na raiz do ArrudaHub — porta de entrada e checklist de nascimento de um Ripple.
 
 Ordem de leitura obrigatória:
 
@@ -35,7 +37,7 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 | **Supabase** | `execute_sql`, `apply_migration`, `list_tables`, `get_logs`, `search_docs`, `list_migrations` | Operações destrutivas em produção sem autorização explícita |
 | **Obsidian** | Ler/escrever vault `arruda_hub` (notas de projeto, Decisões, HOME) no ritual CHECKPOINT/DEPLOY | Dumpar specs/SQL inteiros no vault; código-fonte do repo |
 
-**Graphify (CLI local, não MCP):** grafo do ecossistema em `/Users/mauro/arrudahub/graphify-out/`. Usar `graphify query` / `path` / `--update` para blast radius cross-app. Ver §2 CHECKPOINT passo Graphify.
+**Graphify (CLI local, não MCP):** grafo do ecossistema em `/Users/mauro/arrudahub/graphify-out/`. Usar `graphify query` / `path` / `--update` para blast radius cross-app. Procedimento, smoke e armadilhas: `arruda-rbac-master/docs/graphify/GRAPH_REPORT.md` — **não duplicar a receita aqui**.
 
 **Regra de ouro:** para **qualquer** coisa de DB do ecossistema (Supabase), usar o MCP diretamente. Não peça credenciais, não assuma que não tem acesso — verifique primeiro.
 
@@ -58,11 +60,16 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 5. **Alinhar `CLAUDE.md` do projeto** (rotas, schema, integrações, status) com o estado real.
 6. Se a mudança for **transversal** ao ecossistema: atualizar `AGENTS.md` / `SHARED_RULES.md` / `CLAUDE.md` na **raiz do ArrudaHub** e rodar `./sync-agents.sh` (depois commitar `AGENTS.md` em cada Ripple afetado pela cópia).
 7. **Obsidian (MCP, vault `arruda_hub`):** atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Se MCP offline: avisar e listar o que faltou — não bloquear commit.
-8. **Graphify (Hub):** na raiz ArrudaHub, `graphify` `--update` no corpus docs quente + código/migrations do app tocado. Saídas em `graphify-out/`. Se falhar: avisar “grafo stale” — não bloquear commit. Snapshot versionável (`graph.json`, `GRAPH_REPORT.md`) → copiar para `arruda-rbac-master/docs/graphify/` quando o grafo mudar de forma relevante.
-9. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
-10. `git commit` com mensagem conventional PT-BR (ver §3).
-11. `git push`.
-12. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian/Graphify` (ou falha parcial explícita).
+8. **Graphify (Hub):** na raiz ArrudaHub, `graphify --update` no corpus docs quente + código/migrations do app tocado. Saídas em `graphify-out/` (**nunca versionadas** — ~144 MB, regeneráveis). Se falhar: avisar “grafo stale” — não bloquear commit. Receita e armadilhas: `arruda-rbac-master/docs/graphify/GRAPH_REPORT.md`.
+9. **Higiene de documentação:** rodar `./scripts/doc-hygiene.sh <repo>` na raiz do ArrudaHub.
+   - Arquivo que **esta sessão** criou (aparece como `??` em `git status`, ou `A` no diff contra o HEAD inicial) e não virou canônico: triar e remover sozinho.
+   - Arquivo de outra sessão ou legado: **listar e perguntar** — não remover.
+   - Triagem antes de remover: **promover** (lição vai para `LESSONS.md`, ou `AGENTS.md` §5/§8 se transversal) · **mover** (doc de domínio vai para `docs/`, e o `CLAUDE.md` passa a citá-lo) · **remover** (`git rm`).
+   - Doc de sessão nasce em `docs/sessions/YYYY-MM-DD-<slug>.md`, nunca na raiz.
+10. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
+11. `git commit` com mensagem conventional PT-BR (ver §3).
+12. `git push`.
+13. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian/Graphify` (ou falha parcial explícita).
 
 **Gate anti-staleness (antes do commit):** (a) `CLAUDE.md` descreve o módulo tocado? (b) `PROGRESS` reflete o estado real? (c) decisão afeta outro app? → `graphify query`/`path` + nota em Decisões. Divergência clara em CLAUDE/PROGRESS **bloqueia** o commit até corrigir.
 
@@ -70,12 +77,12 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 
 Ritual completo de entrega: roda `CHECKPOINT` inteiro + dispara deploy Vercel.
 
-1–11. Idênticos ao `CHECKPOINT` (incluindo Obsidian + Graphify + gate).
-12. Se a entrega inclui features ou correções visíveis ao usuário, adicionar entrada na rota `/novidades` do projeto — seguindo obrigatoriamente as regras do §7.1 abaixo (texto aprovado pelo usuário antes de commitar).
-13. Disparar deploy. Duas opções:
+1–12. Idênticos ao `CHECKPOINT` (incluindo Obsidian + Graphify + gate).
+13. Se a entrega inclui features ou correções visíveis ao usuário, adicionar entrada na rota `/novidades` do projeto — seguindo obrigatoriamente as regras do §7.1 abaixo (texto aprovado pelo usuário antes de commitar).
+14. Disparar deploy. Duas opções:
    - Se o projeto tem CI configurado em `main`, bastou `git push` — responder com link do dashboard Vercel.
    - Se precisa rodar `vercel --prod` localmente, executar e aguardar.
-14. Responder com: commit hash + URL do preview/produção + resumo 1 linha + `contexto sync: …`.
+15. Responder com: commit hash + URL do preview/produção + resumo 1 linha + `contexto sync: …`.
 
 **Se `CHECKPOINT` ou `DEPLOY` disparar hook pre-commit que falha:** parar, reportar o erro, **não** fazer `--no-verify`, **não** fazer `--amend`. Resolver e criar novo commit.
 
@@ -156,7 +163,7 @@ docs(agents): registra rituais CHECKPOINT e DEPLOY
 - Alterar contrato entre apps (RPC compartilhada, schema de evento, formato de token).
 - Mexer em `rbac_auth_*`, `rbac_organizations`, `rbac_permissions` de forma estrutural.
 - `DEPLOY` em projeto que não foi autorizado explicitamente nessa sessão — confirmar antes.
-- Remover arquivo, diretório ou commit anterior.
+- Remover arquivo, diretório ou commit anterior — **exceto** arquivo de documentação criado pela própria sessão e ainda não promovido a canônico (ver CHECKPOINT passo 9). O critério é mecânico: `??` em `git status` ou `A` no diff contra o HEAD inicial da sessão. Arquivo que já estava no HEAD quando a sessão começou: sempre perguntar.
 - Usar `git reset --hard`, `git push --force`, `git checkout --`, `git clean -f`.
 
 ### Dica prática
@@ -308,7 +315,7 @@ O agente **nunca** deve commitar/deployar uma entrada de novidades sem antes apr
 
 ## 8. Armadilhas transversais conhecidas
 
-Agregado dos `LESSONS.md` dos 11 projetos. **Antes de mexer numa área, cheque se tem armadilha registrada aqui.**
+Agregado dos `LESSONS.md` dos 16 projetos. **Antes de mexer numa área, cheque se tem armadilha registrada aqui.**
 
 ### 8.1 Segurança e autenticação
 
@@ -330,6 +337,10 @@ Agregado dos `LESSONS.md` dos 11 projetos. **Antes de mexer numa área, cheque s
 - **XML SEFAZ com namespaces múltiplos + arquivos de 5–10MB.** (nfe-radar) → parsing em background job, chunked insert.
 - **Pub/Sub redelivery duplicando documentos.** (nfe-radar) → hash SHA256 + idempotência por `status='sucesso'`.
 - **Analytics events sem `organization_id` no payload.** (rbac-master) → usar profile como fonte canônica, não o evento (ver Decisão 6 em LESSONS).
+- **Migration é aplicada manualmente, via MCP `apply_migration`** — uma por vez, autorizada. O histórico da instância compartilhada tem mais de 1.600 migrations de todos os apps.
+- **`supabase db push` é proibido** contra a instância compartilhada. Ele reconcilia a pasta local contra esse histórico e reaplicaria migrations de RLS já aplicadas. Os `supabase/config.toml` existentes são resíduo de `supabase init` — nenhum repo usa a CLI.
+- **`apply_migration` registra no histórico; `execute_sql` não.** Mudança de schema feita por `execute_sql` fica fora do versionamento — invisível para o próximo agente. Schema sempre por `apply_migration`.
+- **Nome de migration:** `YYYYMMDDHHMMSS_descricao.sql` (14 dígitos). O timestamp define a ordem de aplicação manual; 8 dígitos deixam ambígua a ordem de migrations do mesmo dia.
 
 ### 8.3 Integrações externas
 
