@@ -13,16 +13,17 @@ Em caso de conflito: `AGENTS.md` para comportamento > `SHARED_RULES.md` para có
 
 ## 0. Antes de começar qualquer tarefa
 
-0. **Projeto novo, ou dúvida sobre onde algo mora?** Comece por `ECOSSISTEMA.md` na raiz do ArrudaHub — porta de entrada e checklist de nascimento de um Ripple.
+0.1. **Registrar o HEAD inicial da sessão.** Antes de qualquer commit, rode `git rev-parse HEAD` (por repo tocado) e guarde o SHA — é o que o passo 9 do `CHECKPOINT` (§2) usa para diferenciar arquivo criado por **esta sessão** (`A` no diff contra esse HEAD, ou `??` em `git status`) de arquivo legado. Sem esse SHA registrado, o critério mecânico do passo 9 não tem como ser aplicado.
 
 Ordem de leitura obrigatória:
 
-1. `AGENTS.md` (este arquivo) — comportamento
-2. `SHARED_RULES.md` (raiz) — padrões de código
-3. `CLAUDE.md` (raiz) — mapa do ecossistema
-4. `CLAUDE.md` do projeto específico — stack, rotas, schema
-5. `PROGRESS.md` do projeto — estado atual
-6. `LESSONS.md` do projeto — armadilhas já documentadas
+1. `ECOSSISTEMA.md` (raiz) — porta de entrada: o que é cada arquivo-mãe e como nasce um Ripple
+2. `AGENTS.md` (este arquivo) — comportamento
+3. `SHARED_RULES.md` (raiz) — padrões de código
+4. `CLAUDE.md` (raiz) — mapa do ecossistema
+5. `CLAUDE.md` do projeto específico — stack, rotas, schema
+6. `PROGRESS.md` do projeto — estado atual
+7. `LESSONS.md` do projeto — armadilhas já documentadas
 
 Se o usuário citar arquivo específico, ler esse também antes de agir.
 
@@ -61,10 +62,10 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 6. Se a mudança for **transversal** ao ecossistema: atualizar `AGENTS.md` / `SHARED_RULES.md` / `CLAUDE.md` na **raiz do ArrudaHub** e rodar `./sync-agents.sh` (depois commitar `AGENTS.md` em cada Ripple afetado pela cópia).
 7. **Obsidian (MCP, vault `arruda_hub`):** atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Se MCP offline: avisar e listar o que faltou — não bloquear commit.
 8. **Graphify (Hub):** na raiz ArrudaHub, `graphify --update` no corpus docs quente + código/migrations do app tocado. Saídas em `graphify-out/` (**nunca versionadas** — ~144 MB, regeneráveis). Se falhar: avisar “grafo stale” — não bloquear commit. Receita e armadilhas: `arruda-rbac-master/docs/graphify/GRAPH_REPORT.md`.
-9. **Higiene de documentação:** rodar `./scripts/doc-hygiene.sh <repo>` na raiz do ArrudaHub.
-   - Arquivo que **esta sessão** criou (aparece como `??` em `git status`, ou `A` no diff contra o HEAD inicial) e não virou canônico: triar e remover sozinho.
-   - Arquivo de outra sessão ou legado: **listar e perguntar** — não remover.
-   - Triagem antes de remover: **promover** (lição vai para `LESSONS.md`, ou `AGENTS.md` §5/§8 se transversal) · **mover** (doc de domínio vai para `docs/`, e o `CLAUDE.md` passa a citá-lo) · **remover** (`git rm`).
+9. **Higiene de documentação — escopo: só o que esta sessão criou.** Rodar `/Users/mauro/arrudahub/scripts/doc-hygiene.sh <repo>` (caminho absoluto — o script vive só no repo raiz; as 16 cópias do `AGENTS.md` ficam em repos sem `scripts/`). **Se o script não existir no caminho acima:** avisar e seguir em frente — não bloquear o commit por isso.
+   - O passo 9 trata **apenas** de arquivo que **esta sessão** criou: aparece como `??` em `git status`, ou `A` no diff contra o HEAD inicial registrado no §0.1. Se não virou canônico: triar e remover sozinho.
+   - Arquivo que já estava no HEAD inicial da sessão (legado, de outra sessão) **não é escopo deste passo** — não listar, não perguntar, não remover aqui. O acervo legado (hoje dezenas de candidatos em 8 repos — nfe-radar 55, sales-boost 42, portal-fornecedor 42, commercial-core 41, degusta-go 25, catalog-maker 24, central-hub 17, rbac-master 16) é trabalho da **Fase 2** da spec de higiene de documentação, não do ritual diário. Rodar o auditor sem esse filtro de sessão transforma todo `CHECKPOINT` numa lista enorme de arquivos legados e o passo acaba sendo ignorado — não repita esse erro.
+   - Triagem antes de remover (só dos arquivos da sessão): **promover** (lição vai para `LESSONS.md`, ou `AGENTS.md` §5/§8 se transversal) · **mover** (doc de domínio vai para `docs/`, e o `CLAUDE.md` passa a citá-lo) · **remover** (`git rm`).
    - Doc de sessão nasce em `docs/sessions/YYYY-MM-DD-<slug>.md`, nunca na raiz.
 10. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
 11. `git commit` com mensagem conventional PT-BR (ver §3).
@@ -420,21 +421,28 @@ Após concluir tarefa, responder ao usuário seguindo:
 
 ## Apêndice — Comandos por projeto
 
+Lista autoritativa: array `PROJECTS` do `./sync-agents.sh` (16 projetos).
+
 | Projeto | Dev | Porta default | Package manager | Scripts relevantes |
 |---|---|---|---|---|
-| acordo-flow | `npm run dev` | 5173 | npm | — |
+| arruda-academy | `npm run dev` | 3010 | npm | `test`, `test:watch` |
 | arruda-catalog-maker | `npm run dev` | 5173 | npm | `reprocess-images` |
 | arruda-central-hub | `npm run dev` | 5173 | npm | — |
+| arruda-ceo-hub | `npm run dev` | 8080 | npm | — |
+| arruda-design-system | `npm run dev` (tsup --watch) | N/A (biblioteca, sem dev server) | npm | `showcase:dev`, `showcase:build` (site em `showcase-site/`) |
 | arruda-flow-buddy | `bun dev` | 5173 | **bun** | — |
 | arruda-hub-commercial-core | `npm run dev` | 5173 | npm | `fix:novos-itens-pallet`, `fix:total-weight`, `fix:peso-itens`, `fix:*:dry-run` |
+| arruda-peoplecare-hub | `npm run dev` | 5174 | npm | `test`, `test:run` |
 | arruda-rbac-master | `npm run dev` | 5173 | npm | — |
 | arruda-sales-boost | `npm run dev` | 5173 | npm | `test`, `test:watch`, `db:fix-resumo-type` |
+| arruda-stock-control | `npm run dev` | 5173 | npm | `test`, `test:watch` |
 | degusta-go-app | `npm run dev` | 5173 | npm | `test`, `lint:report`, `lint:fix`, `sonar` |
 | logistics-arrudahub | `node scripts/dev.mjs` | 5173 | npm | `migration:ocorrencias`, `migration:lead-time`, `migration:rota-id`, `test`, `test:ui`, `test:coverage` |
 | nfe-radar | `npm run dev` (frontend) | 5173 | npm | Backend Python separado (Railway) |
+| portal-fornecedor | `npm run dev` | 3001 | npm | `test` |
 | route-planner | `npm run dev` | 5173 | npm | `tsc -b && vite build` |
 
-**Deploy:** todos os frontends em Vercel (auto via `main`). Backend Python de `nfe-radar` em Railway.
+**Deploy:** todos os frontends em Vercel (auto via `main`). Backend Python (Railway): `arruda-sales-boost` (`python-pdf-service`) e `nfe-radar` (`nfe-ingestion-service`, `cte-ingestion-service`, `boleto-ingestion-service`).
 
 ---
 
