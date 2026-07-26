@@ -416,6 +416,62 @@ Doc de sessão nasce em `docs/sessions/YYYY-MM-DD-<slug>.md`, **nunca na raiz** 
 
 ---
 
+## Dados
+
+**Este repo não é dono de nenhuma tabela.** Não há prefixo `central_*` na instância. O que o
+código de SSO tocaria são tabelas de outros donos — mais uma razão para não escrever daqui.
+
+`sso_sessions` tem **1 linha desde nov/2025**. É a medida mais direta do stand-by.
+
+---
+
+## Estado e legado
+
+> **Leia esta seção antes de qualquer outra deste arquivo.** O resto descreve um sistema que não
+> está em uso.
+
+### Em stand-by desde antes de 2026-07
+
+O `arruda-central-hub` foi desenhado como camada de SSO cross-app e **não é fonte de autorização**.
+Identidade, perfil, RLS e matriz de acesso se resolvem no **`arruda-rbac-master`**.
+
+**A armadilha é este repositório parecer vigente.** O código de SSO continua completo e bem
+documentado; um agente que abra o repo sem contexto encontra um fluxo de token plausível e conclui
+que é o caminho atual. Não é. O mecanismo vivo é Supabase Auth direto, com autorização validada no
+banco por RPC e RLS.
+
+### Por que o stand-by foi a decisão certa
+
+Cada time opera exclusivamente um app: Comercial → `arruda-sales-boost`, Trade Marketing →
+`degusta-go-app`, RH → `arruda-peoplecare-hub`, Finanças → `arruda-flow-buddy`. Sessão única
+cross-app nunca foi necessária. O CEO Hub consulta números gerais e autentica em cada app
+normalmente.
+
+Por segurança, também: SSO cria um token que atravessa 16 apps e, com ele, um ponto único cujo
+comprometimento vale por todos.
+
+### Uso residual
+
+`VITE_HUB_CENTRAL_URL` aparece em código real em 4 apps — `arruda-academy`,
+`arruda-peoplecare-hub`, `arruda-sales-boost`, `logistics-arrudahub` — e **só para redirecionar à
+tela de login**. Nos demais é declaração de tipo em `vite-env.d.ts`, sem uso.
+
+**Não adicionar essa variável em app novo.**
+
+### Se um dia for reativado
+
+O `LESSONS.md` deste repo abre com *"Mudanças no Token JWT Quebram TODO o Ecossistema"* — vale como
+aviso de segurança: um claim a mais no JWT muda o que **todas** as policies dos 16 apps enxergam.
+
+1. Consultar `graphify-out/` para o blast radius.
+2. Reconciliar com o modelo canônico do `arruda-rbac-master`, que evoluiu desde o stand-by — a
+   Onda 3 mudou `fn_user_module_tiers`. A documentação de SSO em `docs/sso/` descreve um modelo
+   **superado**: é histórico, não especificação.
+3. **Quando reativar:** só se um usuário passar a precisar de acesso a mais de uma plataforma.
+   Até lá, não investir.
+
+---
+
 ## Contexto cross-app (Graphify + Obsidian)
 
 - **Nota Obsidian:** `01 - Projetos/Arruda Central Hub.md` no vault `arruda_hub`.
