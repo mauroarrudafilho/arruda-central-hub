@@ -386,6 +386,36 @@ Ver `PROGRESS.md` / `ROADMAP.md`. Backlog imediato: GUI admin de usuários no hu
 
 ---
 
+## Documentação do SSO (`docs/sso/`) — desenho preservado, sistema em stand-by
+
+> **Este app está em stand-by e o SSO não é usado.** Evidência: `sso_sessions` tem **1 linha,
+> de 2025-11-21** — oito meses sem uso. Toda a documentação de SSO foi escrita naquela mesma
+> data. O sistema foi construído, testado uma vez e nunca adotado, porque cada time opera
+> exclusivamente um app e sessão única cross-app nunca foi necessária.
+>
+> **Fonte canônica de acesso do ecossistema: `arruda-rbac-master`.** Não usar este repo como
+> referência para permissão, policy ou identidade. Ver `CLAUDE.md` da raiz, seção
+> *arruda-central-hub — stand-by*.
+
+Cinco documentos foram preservados em `docs/sso/` para o caso de reativação — são o desenho,
+não o histórico de execução:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `docs/sso/SSO_COMPLETE_GUIDE.md` | Guia completo do fluxo |
+| `docs/sso/SSO_ENDPOINTS_API_REFERENCE.md` | Referência técnica de integração |
+| `docs/sso/SSO_GLOBAL_SOLUTION.md` | Solução global proposta |
+| `docs/sso/SSO_MODULE_INTEGRATION_GUIDE.md` | Como um módulo integraria |
+| `docs/sso/SSO_FOR_OTHER_AGENTS.md` | Orientação para agentes de outros apps |
+
+**Se reativar, tratar como redesenho, não retomada.** Os apps mudaram desde nov/2025 — a
+autorização passou a ser resolvida pela matriz RBAC (Onda 3, jul/2026), o que os documentos
+acima não conhecem.
+
+Doc de sessão nasce em `docs/sessions/YYYY-MM-DD-<slug>.md`, **nunca na raiz** — ver `AGENTS.md` §2, passo 9.
+
+---
+
 ## Contexto cross-app (Graphify + Obsidian)
 
 - **Nota Obsidian:** `01 - Projetos/Arruda Central Hub.md` no vault `arruda_hub`.
