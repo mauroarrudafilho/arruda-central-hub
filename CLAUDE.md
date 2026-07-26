@@ -463,7 +463,7 @@ tela de login**. Nos demais é declaração de tipo em `vite-env.d.ts`, sem uso.
 O `LESSONS.md` deste repo abre com *"Mudanças no Token JWT Quebram TODO o Ecossistema"* — vale como
 aviso de segurança: um claim a mais no JWT muda o que **todas** as policies dos 16 apps enxergam.
 
-1. Consultar `graphify-out/` para o blast radius.
+1. Levantar o blast radius no código e no banco: `grep -rn "VITE_HUB_CENTRAL_URL\|sso_" nos `src/` dos 16 apps, mais `pg_policies` e `pg_get_functiondef` via MCP Supabase. (O grafo do Graphify saiu do fluxo em 2026-07-26 e não serve como fonte.)
 2. Reconciliar com o modelo canônico do `arruda-rbac-master`, que evoluiu desde o stand-by — a
    Onda 3 mudou `fn_user_module_tiers`. A documentação de SSO em `docs/sso/` descreve um modelo
    **superado**: é histórico, não especificação.
@@ -472,8 +472,8 @@ aviso de segurança: um claim a mais no JWT muda o que **todas** as policies dos
 
 ---
 
-## Contexto cross-app (Graphify + Obsidian)
+## Contexto cross-app (Obsidian)
 
 - **Nota Obsidian:** `01 - Projetos/Arruda Central Hub.md` no vault `arruda_hub`.
-- **Grafo Hub:** `/Users/mauro/arrudahub/graphify-out/` — blast radius antes de mudanças que toquem SSO, RLS, RPC compartilhada ou contratos entre apps.
+- **Blast radius cross-app:** apurar no código e no banco — `grep` nos `src/` dos apps envolvidos, e `pg_policies`/`pg_get_functiondef` via MCP Supabase para RLS, RPC e contratos. O Graphify saiu do fluxo em 2026-07-26; `graphify-out/` é retrato congelado de 25/07 — não usar como estado atual (ver `LESSONS.md` da raiz).
 - **Ritual:** ver `AGENTS.md` §2 (`CHECKPOINT` / `DEPLOY`) — atualizar este `CLAUDE.md` + `PROGRESS.md` no mesmo ritual quando o contexto mudar.

@@ -38,7 +38,9 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 | **Supabase** | `execute_sql`, `apply_migration`, `list_tables`, `get_logs`, `search_docs`, `list_migrations` | Operações destrutivas em produção sem autorização explícita |
 | **Obsidian** | Ler/escrever vault `arruda_hub` (notas de projeto, Decisões, HOME) no ritual CHECKPOINT/DEPLOY | Dumpar specs/SQL inteiros no vault; código-fonte do repo |
 
-**Graphify (CLI local, não MCP):** grafo do ecossistema em `/Users/mauro/arrudahub/graphify-out/`. Usar `graphify query` / `path` / `--update` para blast radius cross-app. Procedimento, smoke e armadilhas: `arruda-rbac-master/docs/graphify/GRAPH_REPORT.md` — **não duplicar a receita aqui**.
+**Graphify — fora do fluxo desde 2026-07-26.** O grafo do ecossistema **não é mais mantido** e o `graphify-out/` no disco é um retrato congelado de **2026-07-25**. Não consultar como se fosse o estado atual, e não citá-lo como fonte. Blast radius cross-app se apura lendo o código e o banco: `grep` nos `src/` dos apps envolvidos, mais `pg_policies` / `pg_proc` via MCP Supabase. Motivo e caminho de retomada em `LESSONS.md` da raiz.
+
+> **Limite conhecido de grafo estático, que motivou a saída.** No `portal-fornecedor`, o grafo mostrava as policies de acordos ligadas a `usuarios_acordos` e a **nenhuma** tabela `rbac_*` — porque lia o texto do predicado, não o corpo dos helpers. Medindo `pg_get_functiondef`, `get_user_data_unified` e `get_user_role_v2` leem `rbac_*`, e `can_user_view_acordo` / `get_acordos_where_filter` leem os dois. O modelo real é de duas camadas — **RBAC é o portão, `usuarios_acordos` é o escopo** — e a camada canônica era justamente a que sumia. Para autorização, medir a função, não o grafo.
 
 **Regra de ouro:** para **qualquer** coisa de DB do ecossistema (Supabase), usar o MCP diretamente. Não peça credenciais, não assuma que não tem acesso — verifique primeiro.
 
@@ -61,7 +63,7 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 5. **Alinhar `CLAUDE.md` do projeto** (rotas, schema, integrações, status) com o estado real.
 6. Se a mudança for **transversal** ao ecossistema: atualizar `AGENTS.md` / `SHARED_RULES.md` / `CLAUDE.md` na **raiz do ArrudaHub** e rodar `./sync-agents.sh` (depois commitar `AGENTS.md` em cada Ripple afetado pela cópia).
 7. **Obsidian (MCP, vault `arruda_hub`):** atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Se MCP offline: avisar e listar o que faltou — não bloquear commit.
-8. **Graphify (Hub):** na raiz ArrudaHub, `graphify --update` no corpus docs quente + código/migrations do app tocado. Saídas em `graphify-out/` (**nunca versionadas** — ~144 MB, regeneráveis). Se falhar: avisar “grafo stale” — não bloquear commit. Receita e armadilhas: `arruda-rbac-master/docs/graphify/GRAPH_REPORT.md`.
+8. ~~**Graphify (Hub)**~~ — **passo removido em 2026-07-26.** O grafo saiu do fluxo; não rodar `graphify --update` no ritual. Ver §1.
 9. **Higiene de documentação — escopo: só o que esta sessão criou.** Rodar `/Users/mauro/arrudahub/scripts/doc-hygiene.sh <repo>` (caminho absoluto — o script vive só no repo raiz; as 16 cópias do `AGENTS.md` ficam em repos sem `scripts/`). **Se o script não existir no caminho acima:** avisar e seguir em frente — não bloquear o commit por isso.
    - O passo 9 trata **apenas** de arquivo que **esta sessão** criou: aparece como `??` em `git status`, ou `A` no diff contra o HEAD inicial registrado no §0.1. Se não virou canônico: triar e remover sozinho.
    - Arquivo que já estava no HEAD inicial da sessão (legado, de outra sessão) **não é escopo deste passo** — não listar, não perguntar, não remover aqui. O acervo legado (hoje dezenas de candidatos em 8 repos — nfe-radar 55, sales-boost 42, portal-fornecedor 42, commercial-core 41, degusta-go 25, catalog-maker 24, central-hub 17, rbac-master 16) é trabalho da **Fase 2** da spec de higiene de documentação, não do ritual diário. Rodar o auditor sem esse filtro de sessão transforma todo `CHECKPOINT` numa lista enorme de arquivos legados e o passo acaba sendo ignorado — não repita esse erro.
@@ -70,15 +72,15 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 10. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
 11. `git commit` com mensagem conventional PT-BR (ver §3).
 12. `git push`.
-13. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian/Graphify` (ou falha parcial explícita).
+13. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian` (ou falha parcial explícita).
 
-**Gate anti-staleness (antes do commit):** (a) `CLAUDE.md` descreve o módulo tocado? (b) `PROGRESS` reflete o estado real? (c) decisão afeta outro app? → `graphify query`/`path` + nota em Decisões. Divergência clara em CLAUDE/PROGRESS **bloqueia** o commit até corrigir.
+**Gate anti-staleness (antes do commit):** (a) `CLAUDE.md` descreve o módulo tocado? (b) `PROGRESS` reflete o estado real? (c) decisão afeta outro app? → conferir o uso real no `src/` dos apps envolvidos (e `pg_policies` / `pg_proc` se for RLS ou RPC), depois nota em Decisões. Divergência clara em CLAUDE/PROGRESS **bloqueia** o commit até corrigir.
 
 ### `DEPLOY`
 
 Ritual completo de entrega: roda `CHECKPOINT` inteiro + dispara deploy Vercel.
 
-1–12. Idênticos ao `CHECKPOINT` (incluindo Obsidian + Graphify + gate).
+1–12. Idênticos ao `CHECKPOINT` (incluindo Obsidian + gate).
 13. Se a entrega inclui features ou correções visíveis ao usuário, adicionar entrada na rota `/novidades` do projeto — seguindo obrigatoriamente as regras do §7.1 abaixo (texto aprovado pelo usuário antes de commitar).
 14. Disparar deploy. Duas opções:
    - Se o projeto tem CI configurado em `main`, bastou `git push` — responder com link do dashboard Vercel.

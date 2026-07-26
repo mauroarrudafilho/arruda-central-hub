@@ -47,7 +47,7 @@ policies dos 16 apps enxergam.
 
 Antes de qualquer reativação:
 
-1. Consultar o grafo (`graphify-out/`) para o blast radius — SSO toca contrato entre apps.
+1. Levantar o blast radius no código e no banco — SSO toca contrato entre apps. `grep` por `VITE_HUB_CENTRAL_URL` e `sso_` nos `src/` dos 16, mais `pg_policies`/`pg_get_functiondef` via MCP Supabase.
 2. Reconciliar com o modelo canônico do `arruda-rbac-master`, que evoluiu desde o stand-by (a
    Onda 3 mudou `fn_user_module_tiers`). A documentação de SSO deste repo descreve um modelo
    **superado**.
