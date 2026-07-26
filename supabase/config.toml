@@ -1,1 +1,13 @@
+# ⚠️ NUNCA rodar `supabase db push` neste repositório.
+#
+# A instância kgzybpelluftexrewyke é COMPARTILHADA pelos 16 apps do ArrudaHub.
+# `db push` compara esta pasta local (parcial) com o histórico remoto (1.645
+# migrations) e reaplicaria migrations de RLS já aplicadas por outros apps —
+# é o modo de falha dos apagões de julho/2026.
+#
+# Migration se aplica UMA POR VEZ, via MCP `apply_migration`, com autorização
+# explícita. Este arquivo existe apenas para `supabase functions deploy`.
+#
+# Ver: arrudahub/docs/superpowers/specs/2026-07-25-higiene-documentacao-design.md §4
+
 project_id = "kgzybpelluftexrewyke"

@@ -35,3 +35,6 @@ node_modules/
 # tasks.json
 # tasks/ 
 .vercel
+
+# Cache do Supabase CLI — persiste o link com a instância COMPARTILHADA de produção.
+supabase/.temp/
