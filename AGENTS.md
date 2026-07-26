@@ -339,9 +339,10 @@ Agregado dos `LESSONS.md` dos 16 projetos. **Antes de mexer numa área, cheque s
 - **Pub/Sub redelivery duplicando documentos.** (nfe-radar) → hash SHA256 + idempotência por `status='sucesso'`.
 - **Analytics events sem `organization_id` no payload.** (rbac-master) → usar profile como fonte canônica, não o evento (ver Decisão 6 em LESSONS).
 - **Migration é aplicada manualmente, via MCP `apply_migration`** — uma por vez, autorizada. O histórico da instância compartilhada tem mais de 1.600 migrations de todos os apps.
-- **`supabase db push` é proibido** contra a instância compartilhada. Ele reconcilia a pasta local contra esse histórico e reaplicaria migrations de RLS já aplicadas. Os `supabase/config.toml` existentes são resíduo de `supabase init` — nenhum repo usa a CLI.
+- **`supabase db push` é proibido** contra a instância compartilhada. Ele reconcilia a pasta local contra esse histórico e reaplicaria migrations de RLS já aplicadas. Os 7 `supabase/config.toml` do ecossistema trazem esse aviso no topo — **não os apague**: 4 deles (`degusta-go`, `portal-fornecedor`, `ceo-hub`, `sales-boost`) carregam `verify_jwt` de edge functions vivas, e removê-los derrubaria o deploy das functions.
+- **Nunca versionar `supabase/.temp/`.** É o cache de link da CLI: guarda `project-ref` e `pooler-url` da instância compartilhada e faz `db push` mirar produção sem passo de `link`. Todo repo com `supabase/` deve ignorá-lo.
 - **`apply_migration` registra no histórico; `execute_sql` não.** Mudança de schema feita por `execute_sql` fica fora do versionamento — invisível para o próximo agente. Schema sempre por `apply_migration`.
-- **Nome de migration:** `YYYYMMDDHHMMSS_descricao.sql` (14 dígitos). O timestamp define a ordem de aplicação manual; 8 dígitos deixam ambígua a ordem de migrations do mesmo dia.
+- **Nome de migration:** `YYYYMMDDHHMMSS_descricao.sql` (14 dígitos), **da próxima em diante**. Vale para arquivo novo; migration já aplicada não se renomeia — a ordem real dela está em `supabase_migrations.schema_migrations`, não no nome do arquivo, e reescrever o nome inventaria um horário que ninguém mediu.
 
 ### 8.3 Integrações externas
 
