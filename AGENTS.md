@@ -27,6 +27,48 @@ Ordem de leitura obrigatória:
 
 Se o usuário citar arquivo específico, ler esse também antes de agir.
 
+### 0.2 RBAC canônico — lei do ecossistema, não sugestão
+
+**Qualquer trabalho de acesso, permissão, policy ou matriz de perfil começa no
+`arruda-rbac-master`**, não no app que apresenta o sintoma. Ele é a fonte única de identidade e
+autorização. O modelo está em `arruda-rbac-master/CLAUDE.md` § *O Modelo Canônico*; o resumo
+operacional é:
+
+| Eixo | O que é | Valores |
+|---|---|---|
+| **Perfil canônico** | capacidade — o que **pode fazer** | `visualizador` · `operador` · `gestor` · `admin` — **só esses 4** |
+| **Cargo** | contexto — o que a pessoa **é** | Vendedor, Promotor, Analista, Financeiro… — **texto, não confere permissão** |
+| **Escopo de dados** | alcance | `proprio` · `equipe` · `todos` |
+| **Vínculo de domínio** | operação | `promoters`, `usuarios_acordos`, `portal_acessos` |
+| **Tenant** | organização | `organizacao_id` — **nunca** `tenant_id` |
+
+**As três confusões que mais custam caro:**
+
+1. **Cargo não é role.** "Vendedor" e "promotor" são cargo. Quem responde "essa pessoa é vendedora"
+   é o **vínculo de domínio** (`usuarios_acordos`), nunca uma role nem uma flag. A coluna
+   `eh_vendedor` foi removida justamente por isso — não recriar equivalente.
+2. **RBAC é o portão, o vínculo é o escopo.** Foi o que quebrou os acordos em 24/07: a policy caiu
+   em `FALSE` porque procurava a role literal `'vendedor'` (o perfil unificado é `operador`), e
+   comparava `auth.uid()` com `acordos.vendedor_id`, que referencia `usuarios_acordos.id`.
+   Ao escrever policy: **papel pelo RBAC, linha pelo vínculo.**
+3. **Perfil novo não se inventa.** São 4. Precisa de recorte diferente? É escopo de dados ou
+   vínculo, não um quinto perfil. QA/leitura ampla = `visualizador` + `todos`.
+
+**Migração em andamento:** `degusta-go-app` e `arruda-sales-boost` ainda carregam enums próprios
+(`app_role` com `promotor`, `vendedor`, `fornecedor`) e convergem para o modelo canônico. Ao mexer
+neles, **não estender o enum legado** — mapear para perfil + cargo + vínculo.
+
+**Repo novo — obrigatório desde já.** Nenhum Ripple novo nasce com role própria, tabela de
+permissão própria ou enum de tipo de usuário. Nasce consumindo o RBAC: perfil canônico + cargo +
+escopo + `organizacao_id`, com a tabela de vínculo do seu domínio referenciando o usuário canônico.
+Checklist em `ECOSSISTEMA.md` § *Como nasce um Ripple novo*.
+
+**Ao validar acesso, medir a função, não o nome da policy.** O predicado costuma citar só a tabela
+de vínculo; a camada de RBAC está dentro do helper. Conferir com
+`select pg_get_functiondef(oid) from pg_proc where proname = '<helper>'` — foi assim que se
+descobriu que `get_acordos_where_filter` lê `rbac_*` **e** `usuarios_acordos`, e que ler só o
+predicado escondia a camada canônica.
+
 ---
 
 ## 1. Inventário de capacidades — MCPs disponíveis
@@ -37,6 +79,18 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 |---|---|---|
 | **Supabase** | `execute_sql`, `apply_migration`, `list_tables`, `get_logs`, `search_docs`, `list_migrations` | Operações destrutivas em produção sem autorização explícita |
 | **Obsidian** | Ler/escrever vault `arruda_hub` (notas de projeto, Decisões, HOME) no ritual CHECKPOINT/DEPLOY | Dumpar specs/SQL inteiros no vault; código-fonte do repo |
+
+**Caminho do vault e a armadilha do MCP `obsidian`.** O vault vive em
+`/Users/mauro/Documents/Obsidian Vault/arruda_hub` — 51 notas, com `01 - Projetos/`,
+`04 - Conhecimento/Decisões/` e `HOME.md`. Existe um segundo diretório,
+`/Users/mauro/Documents/Ossidian Vault/` (typo, 1 arquivo, parado desde março/2026): **não é o
+vault, não escrever lá**.
+
+O MCP `obsidian` é um `server-filesystem` configurado com o caminho certo, **mas o cliente envia o
+cwd do projeto como root MCP e isso sobrescreve o argumento**: `list_allowed_directories` responde
+`/Users/mauro/arrudahub`, e toda leitura do vault falha. Não é config quebrada — não "conserte" o
+`~/.claude.json`, que já está correto. **Use as ferramentas de arquivo normais (Read/Write/Bash)
+com o caminho absoluto do vault**, que funcionam sem restrição. Verificado em 2026-07-26.
 
 **Graphify — fora do fluxo desde 2026-07-26.** O grafo do ecossistema **não é mais mantido** e o `graphify-out/` no disco é um retrato congelado de **2026-07-25**. Não consultar como se fosse o estado atual, e não citá-lo como fonte. Blast radius cross-app se apura lendo o código e o banco: `grep` nos `src/` dos apps envolvidos, mais `pg_policies` / `pg_proc` via MCP Supabase. Motivo e caminho de retomada em `LESSONS.md` da raiz.
 
@@ -332,6 +386,54 @@ Agregado dos `LESSONS.md` dos 16 projetos. **Antes de mexer numa área, cheque s
 - **[SEC-004 — 2026-07-24] Policy `TO PUBLIC` + helper SECURITY DEFINER + `REVOKE EXECUTE` = link público 401/`42501`.** Anon avalia policies `PUBLIC` e precisa de `EXECUTE` no helper (`get_promotor_id_*`, `is_admin()`, `is_field_vendedor()`, …). `REVOKE … FROM anon` **não** remove grant via role `PUBLIC` — usar `REVOKE FROM PUBLIC` + allowlist (migration B2). Padrão obrigatório: rota pública via RPC/`Edge` (`SHARED_RULES` §8.6 / §3.1). Ver harness §8.6 e `scripts/harness_public_links_security.sql` no rbac-master.
 
 ### 8.2 Dados e performance
+
+#### Carga no Supabase — as 5 regras que evitam derrubar a instância
+
+O banco caiu em ondas em **21 e 24/07/2026**. A causa não foi volume de usuários — foram 60 contas.
+Foi **custo de RLS por linha** somado a **retry storm do cliente**. As regras abaixo são o que
+manteve o estado atual; medido em 2026-07-26 sobre 990 policies.
+
+1. **`(SELECT auth.uid())`, nunca `auth.uid()` cru.** Envolvido em `SELECT`, o planner avalia
+   **uma vez por query** (InitPlan); cru, avalia **uma vez por linha varrida**. Numa tabela de
+   100 mil linhas isso é a diferença entre 1 e 100.000 execuções. **Estado: 365 policies corretas,
+   3 pendentes** — e as 3 são `INSERT` (`galeria_snapshots`, `feed_snapshots`,
+   `portal_nfs_devolucao`), onde o custo é por linha inserida, não varrida. Ou seja: **a dívida
+   está paga; o trabalho agora é não reintroduzir.** Vale igual para `auth.jwt()`.
+2. **Helper de policy é `STABLE`, nunca `VOLATILE`.** `VOLATILE` impede o cache do planner e
+   re-executa por linha, anulando a regra 1. **Estado: 17 de 19 helpers são `STABLE`. As duas
+   exceções são `lms_is_admin` e `lms_is_admin_or_manager`**, que governam as 27 policies do
+   `lms_*` — dívida aberta, conserto de uma linha (`ALTER FUNCTION … STABLE`). Helper novo nasce
+   `STABLE SECURITY DEFINER` com `search_path` fixo.
+3. **Não empilhar policy permissiva.** Policies permissivas se somam por `OR`, e o Postgres avalia
+   **todas** por linha até uma passar. **Estado: nenhuma tabela tem 4+ permissivas no mesmo
+   comando** — manter assim. Precisa de mais de uma condição? Junte com `OR` dentro de **uma**
+   policy, ou use `AS RESTRICTIVE` quando a intenção for filtrar (ver §8.6).
+4. **Toda coluna que uma policy filtra precisa de índice.** `organizacao_id = stock_org_do_usuario()`
+   sem índice em `organizacao_id` é seq scan a cada query, com o custo do helper por linha. Policy
+   nova sem índice de apoio é meia policy.
+5. **Retry do cliente com backoff exponencial, sempre.** O segundo vetor dos apagões foi o
+   tracking reenviando em loop contra um banco já degradado — cada retry empilha conexão e piora.
+   Erro de rede → backoff com teto e limite de tentativas, nunca retry imediato. Realtime tem
+   kill switch por app (`VITE_SUPABASE_REALTIME_ENABLED`, default **off**) — não reativar sem
+   medir.
+
+**Como conferir antes de propor policy nova** (MCP Supabase, leitura pura):
+
+```sql
+-- 1+2: chamadas por linha e volatilidade de helper
+select policyname, qual from pg_policies
+where schemaname='public' and tablename='<tabela>'
+  and (coalesce(qual,'')||coalesce(with_check,'')) ~ 'auth\.(uid|jwt)\(\)'
+  and (coalesce(qual,'')||coalesce(with_check,'')) !~ '\( *SELECT auth\.';
+-- 3: empilhamento
+select cmd, count(*) from pg_policies
+where schemaname='public' and tablename='<tabela>' and permissive='PERMISSIVE' group by cmd;
+```
+
+**Regra de ouro da §8.2:** contagem de policy sem a dimensão de `role` engana. Sempre excluir
+`service_role` — ela ignora RLS por desenho, e policies `USING (true)` para ela são corretas.
+Contar sem esse filtro produz alarme falso (aconteceu com o `arruda-stock-control`, que parecia
+ter 16 tabelas abertas e tem zero).
 
 - **`NOW()` do servidor, não `new Date()` do cliente.** (acordo-flow) → timestamps sempre no banco.
 - **Multiplicidade product vs product_version em pedidos.** (commercial-core) → FK sempre para version, preço histórico preservado.
