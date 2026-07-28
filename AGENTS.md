@@ -78,21 +78,23 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 | MCP | Para quê | Quando NÃO usar |
 |---|---|---|
 | **Supabase** | `execute_sql`, `apply_migration`, `list_tables`, `get_logs`, `search_docs`, `list_migrations` | Operações destrutivas em produção sem autorização explícita |
-| **Obsidian** | Ler/escrever vault `arruda_hub` (notas de projeto, Decisões, HOME) no ritual CHECKPOINT/DEPLOY | Dumpar specs/SQL inteiros no vault; código-fonte do repo |
+| **Obsidian (vault git)** | Notas de projeto, Decisões, HOME no ritual CHECKPOINT/DEPLOY via repo `arruda-hub-vault` | Dumpar specs/SQL inteiros no vault; código-fonte dos Ripples |
 
-**Caminho do vault e a armadilha do MCP `obsidian`.** O vault vive em
-`/Users/mauro/Documents/Obsidian Vault/arruda_hub` — 51 notas, com `01 - Projetos/`,
-`04 - Conhecimento/Decisões/` e `HOME.md`. Existe um segundo diretório,
-`/Users/mauro/Documents/Ossidian Vault/` (typo, 1 arquivo, parado desde março/2026): **não é o
-vault, não escrever lá**.
+**Vault Obsidian — canônico = GitHub (2026-07-28).**
 
-O MCP `obsidian` é um `server-filesystem` configurado com o caminho certo, **mas o cliente envia o
-cwd do projeto como root MCP e isso sobrescreve o argumento**: `list_allowed_directories` responde
-`/Users/mauro/arrudahub`, e toda leitura do vault falha. Não é config quebrada — não "conserte" o
-`~/.claude.json`, que já está correto. **Use as ferramentas de arquivo normais (Read/Write/Bash)
-com o caminho absoluto do vault**, que funcionam sem restrição. Verificado em 2026-07-26.
+| | |
+|---|---|
+| **Repo** | https://github.com/mauroarrudafilho/arruda-hub-vault |
+| **Clone canônico** | `/Users/mauro/arrudahub/arruda-hub-vault` (no cloud: checkout equivalente desse repo) |
+| **Estrutura** | `01 - Projetos/`, `04 - Conhecimento/Decisões/`, `HOME.md`, `LEIA-PRIMEIRO - Agentes de IA.md` |
+| **Escrita no ritual** | Read/Write/Bash no **clone**; depois `git add` nominal + `commit` + `push` **no repo do vault** (além dos commits dos Ripples) |
 
-**Graphify — fora do fluxo desde 2026-07-26.** O grafo do ecossistema **não é mais mantido** e o `graphify-out/` no disco é um retrato congelado de **2026-07-25**. Não consultar como se fosse o estado atual, e não citá-lo como fonte. Blast radius cross-app se apura lendo o código e o banco: `grep` nos `src/` dos apps envolvidos, mais `pg_policies` / `pg_proc` via MCP Supabase. Motivo e caminho de retomada em `LESSONS.md` da raiz.
+- Cloud / Cursor online: clonar ou abrir `arruda-hub-vault` — **não** depender de caminhos sob `/Users/mauro/Documents/...`.
+- `Documents/Obsidian Vault/arruda_hub` (se existir no desktop): cópia opcional do app Obsidian Desktop — **não é canônico para agentes**. Preferir abrir o clone git no Obsidian.
+- `/Users/mauro/Documents/Ossidian Vault/` (typo): **não é o vault, não escrever lá**.
+- MCP `obsidian` (`server-filesystem`): **não** é o caminho preferido do ritual (o cliente costuma sobrescrever o root com o cwd do projeto). Preferir ferramentas de arquivo no clone git. Não “consertar” `~/.claude.json` por causa disso.
+
+**Graphify — fora do fluxo desde 2026-07-26.** O grafo do ecossistema **não é mais mantido** e o `graphify-out/` no disco é um retrato congelado de **2026-07-25**. Não consultar como se fosse o estado atual, não citá-lo como fonte, **não** rodar `graphify query` / `path` / `explain` / `update`. Blast radius cross-app se apura lendo o código e o banco: `grep` nos `src/` dos apps envolvidos, mais `pg_policies` / `pg_proc` via MCP Supabase. Motivo e caminho de retomada em `LESSONS.md` da raiz.
 
 > **Limite conhecido de grafo estático, que motivou a saída.** No `portal-fornecedor`, o grafo mostrava as policies de acordos ligadas a `usuarios_acordos` e a **nenhuma** tabela `rbac_*` — porque lia o texto do predicado, não o corpo dos helpers. Medindo `pg_get_functiondef`, `get_user_data_unified` e `get_user_role_v2` leem `rbac_*`, e `can_user_view_acordo` / `get_acordos_where_filter` leem os dois. O modelo real é de duas camadas — **RBAC é o portão, `usuarios_acordos` é o escopo** — e a camada canônica era justamente a que sumia. Para autorização, medir a função, não o grafo.
 
@@ -116,8 +118,8 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 4. Se aprendeu algo (armadilha, decisão técnica, workaround), adicionar entrada em `LESSONS.md`.
 5. **Alinhar `CLAUDE.md` do projeto** (rotas, schema, integrações, status) com o estado real.
 6. Se a mudança for **transversal** ao ecossistema: atualizar `AGENTS.md` / `SHARED_RULES.md` / `CLAUDE.md` na **raiz do ArrudaHub** e rodar `./sync-agents.sh` (depois commitar `AGENTS.md` em cada Ripple afetado pela cópia).
-7. **Obsidian (MCP, vault `arruda_hub`):** atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Se MCP offline: avisar e listar o que faltou — não bloquear commit.
-8. ~~**Graphify (Hub)**~~ — **passo removido em 2026-07-26.** O grafo saiu do fluxo; não rodar `graphify --update` no ritual. Ver §1.
+7. **Obsidian (vault git `arruda-hub-vault`):** no clone canônico (`/Users/mauro/arrudahub/arruda-hub-vault` ou checkout cloud do mesmo repo), atualizar nota em `01 - Projetos/<App>.md` (tabela Últimas atualizações); se decisão cross-app, criar nota em `04 - Conhecimento/Decisões/`; 1 linha em `HOME.md`. Em seguida `git add` nominal + `commit` + `push` **nesse repo**. Se o clone/repo estiver ausente ou o push falhar: avisar e listar o que faltou — **não** bloquear o commit do Ripple.
+8. ~~**Graphify (Hub)**~~ — **passo removido em 2026-07-26.** O grafo saiu do fluxo; não rodar `graphify` no ritual. Ver §1.
 9. **Higiene de documentação — escopo: só o que esta sessão criou.** Rodar `/Users/mauro/arrudahub/scripts/doc-hygiene.sh <repo>` (caminho absoluto — o script vive só no repo raiz; as 16 cópias do `AGENTS.md` ficam em repos sem `scripts/`). **Se o script não existir no caminho acima:** avisar e seguir em frente — não bloquear o commit por isso.
    - O passo 9 trata **apenas** de arquivo que **esta sessão** criou: aparece como `??` em `git status`, ou `A` no diff contra o HEAD inicial registrado no §0.1. Se não virou canônico: triar e remover sozinho.
    - Arquivo que já estava no HEAD inicial da sessão (legado, de outra sessão) **não é escopo deste passo** — não listar, não perguntar, não remover aqui. O acervo legado (hoje dezenas de candidatos em 8 repos — nfe-radar 55, sales-boost 42, portal-fornecedor 42, commercial-core 41, degusta-go 25, catalog-maker 24, central-hub 17, rbac-master 16) é trabalho da **Fase 2** da spec de higiene de documentação, não do ritual diário. Rodar o auditor sem esse filtro de sessão transforma todo `CHECKPOINT` numa lista enorme de arquivos legados e o passo acaba sendo ignorado — não repita esse erro.
@@ -126,7 +128,7 @@ Salva estado e **sincroniza contexto** (não é só git). Usado para pontos de p
 10. `git add` **nominal** (nunca `-A` ou `.`) dos arquivos relevantes.
 11. `git commit` com mensagem conventional PT-BR (ver §3).
 12. `git push`.
-13. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian` (ou falha parcial explícita).
+13. Responder com: commit hash + resumo 1 linha + confirmação `contexto sync: CLAUDE/PROGRESS/Obsidian(vault git)` (ou falha parcial explícita).
 
 **Gate anti-staleness (antes do commit):** (a) `CLAUDE.md` descreve o módulo tocado? (b) `PROGRESS` reflete o estado real? (c) decisão afeta outro app? → conferir o uso real no `src/` dos apps envolvidos (e `pg_policies` / `pg_proc` se for RLS ou RPC), depois nota em Decisões. Divergência clara em CLAUDE/PROGRESS **bloqueia** o commit até corrigir.
 
@@ -139,7 +141,7 @@ Ritual completo de entrega: roda `CHECKPOINT` inteiro + dispara deploy Vercel.
 14. Disparar deploy. Duas opções:
    - Se o projeto tem CI configurado em `main`, bastou `git push` — responder com link do dashboard Vercel.
    - Se precisa rodar `vercel --prod` localmente, executar e aguardar.
-15. Responder com: commit hash + URL do preview/produção + resumo 1 linha + `contexto sync: …`.
+15. Responder com: commit hash + URL do preview/produção + resumo 1 linha + `contexto sync: CLAUDE/PROGRESS/Obsidian(vault git)` (ou falha parcial explícita).
 
 **Se `CHECKPOINT` ou `DEPLOY` disparar hook pre-commit que falha:** parar, reportar o erro, **não** fazer `--no-verify`, **não** fazer `--amend`. Resolver e criar novo commit.
 
