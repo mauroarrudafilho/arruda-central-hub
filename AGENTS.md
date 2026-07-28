@@ -391,19 +391,21 @@ Agregado dos `LESSONS.md` dos 16 projetos. **Antes de mexer numa área, cheque s
 
 O banco caiu em ondas em **21 e 24/07/2026**. A causa não foi volume de usuários — foram 60 contas.
 Foi **custo de RLS por linha** somado a **retry storm do cliente**. As regras abaixo são o que
-manteve o estado atual; medido em 2026-07-26 sobre 990 policies.
+manteve o estado atual; medido em 2026-07-28 sobre ~1026 policies. Placar contínuo:
+`arruda-rbac-master/scripts/harness_supabase_performance_placar.sql` (MCP `execute_sql`).
 
 1. **`(SELECT auth.uid())`, nunca `auth.uid()` cru.** Envolvido em `SELECT`, o planner avalia
-   **uma vez por query** (InitPlan); cru, avalia **uma vez por linha varrida**. Numa tabela de
-   100 mil linhas isso é a diferença entre 1 e 100.000 execuções. **Estado: 365 policies corretas,
-   3 pendentes** — e as 3 são `INSERT` (`galeria_snapshots`, `feed_snapshots`,
-   `portal_nfs_devolucao`), onde o custo é por linha inserida, não varrida. Ou seja: **a dívida
-   está paga; o trabalho agora é não reintroduzir.** Vale igual para `auth.jwt()`.
+ **uma vez por query** (InitPlan); cru, avalia **uma vez por linha varrida**. Numa tabela de
+ 100 mil linhas isso é a diferença entre 1 e 100.000 execuções. **Estado (2026-07-28): 4 policies
+ residuais** com `auth.uid()`/`auth.jwt()` cru — `galeria_snapshots` INSERT,
+ `feed_snapshots` INSERT, `portal_nfs_devolucao` INSERT, `finance_reembolsos` UPDATE.
+ Custo principal é em SELECT/UPDATE de varredura; INSERT residual é menor. Dívida
+ estrutural de SELECT está paga — não reintroduzir. Vale igual para `auth.jwt()`.
 2. **Helper de policy é `STABLE`, nunca `VOLATILE`.** `VOLATILE` impede o cache do planner e
-   re-executa por linha, anulando a regra 1. **Estado: 17 de 19 helpers são `STABLE`. As duas
-   exceções são `lms_is_admin` e `lms_is_admin_or_manager`**, que governam as 27 policies do
-   `lms_*` — dívida aberta, conserto de uma linha (`ALTER FUNCTION … STABLE`). Helper novo nasce
-   `STABLE SECURITY DEFINER` com `search_path` fixo.
+ re-executa por linha, anulando a regra 1. **Estado (2026-07-28): `lms_is_admin`
+ e `lms_is_admin_or_manager` já são `STABLE`.** Helper novo nasce `STABLE SECURITY DEFINER`
+ com `search_path` fixo. Auditar com o harness `harness_supabase_performance_placar.sql`
+ (check A04) se algum helper VOLATILE voltar a aparecer em predicado de policy.
 3. **Não empilhar policy permissiva.** Policies permissivas se somam por `OR`, e o Postgres avalia
    **todas** por linha até uma passar. **Estado: nenhuma tabela tem 4+ permissivas no mesmo
    comando** — manter assim. Precisa de mais de uma condição? Junte com `OR` dentro de **uma**
