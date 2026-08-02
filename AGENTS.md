@@ -102,6 +102,39 @@ Antes de dizer "não consigo", verifique esta lista. Se a tarefa se encaixa em u
 
 Outros MCPs (Gmail, Calendar, navegação web, etc.) podem existir no ambiente — avaliar caso a caso antes de oficializar nesta tabela.
 
+### 1.1 Infraestrutura — Vercel, Supabase, Railway
+
+Antes de propor **nova Edge Function**, **pg_cron** ou lógica pesada no banco, aplicar esta
+árvore. Objetivo: **Supabase guarda e governa; Railway executa; Vercel apresenta.**
+
+```
+Precisa rodar código server-side?
+├── Só UI / fetch leve → Vercel (frontend ou API route curta)
+├── Persistência / auth / regra de acesso → Supabase (tabela, RLS, RPC, trigger)
+└── Processamento pesado ou repetitivo → Railway (worker Python)
+         └── Supabase só orquestra: trigger → hub_eventos OU Edge Function fina → HTTP Railway
+```
+
+| Colocar no **Railway** | Manter no **Supabase** | Manter no **Vercel** |
+|---|---|---|
+| Cron, polling, fila consumida em loop | Postgres, migrations, RLS | React, assets, rotas SPA |
+| PDF / XML / Excel / OFX parsing | Auth, JWT, Storage upload | Deploy automático `main` |
+| Python + libs nativas | Triggers → `hub_eventos` | Preview por PR |
+| Job > ~30s, backfill agendado | Edge Function **fina** (< few sec): validar, encaminhar | |
+| Ingestão e-mail (Gmail API) | RPC `SECURITY DEFINER` | |
+| Reprocessamento / retry em lote | | |
+| Agentes longos (SDK, digest) | | |
+
+**Ao implementar feature nova:**
+
+1. Se o usuário pede "automático todo dia" ou "processar arquivo" → **default Railway**, não Edge Function.
+2. Edge Function nova só se: validação curta, webhook relay, ou chamada one-shot ao Railway.
+3. Não adicionar carga desnecessária ao Postgres (loops, parsing de blob, ETL in-database).
+4. Novo serviço Railway: FastAPI + `railway.toml`, `service_role` via env, logs estruturados, `/health`.
+5. Documentar URL e env vars no `CLAUDE.md` do Ripple + entrada no apêndice deste arquivo.
+
+**Serviços existentes:** ver apêndice (Deploy). Blueprint: `docs/BLUEPRINT_REDE_DE_AGENTES_2026-07.md`.
+
 ---
 
 ## 2. Rituais — Acronyms de comando
@@ -523,6 +556,7 @@ Após concluir tarefa, responder ao usuário seguindo:
 - ❌ Expor caminhos internos `/sessions/...` em respostas ao usuário — usar "pasta do projeto" ou nome do projeto.
 - ❌ Explicar o que o link `computer://` já mostra.
 - ❌ Repetir "sou uma IA" ou disclaimers desnecessários.
+- ❌ Invocar Aikido / `aikido-scan` / `aikido_full_scan` no fim de tarefa, CHECKPOINT ou DEPLOY — plugin retirado do fluxo; não bloquear entrega por isso.
 
 ---
 
@@ -549,7 +583,9 @@ Lista autoritativa: array `PROJECTS` do `./sync-agents.sh` (16 projetos).
 | portal-fornecedor | `npm run dev` | 3001 | npm | `test` |
 | route-planner | `npm run dev` | 5173 | npm | `tsc -b && vite build` |
 
-**Deploy:** todos os frontends em Vercel (auto via `main`). Backend Python (Railway): `arruda-sales-boost` (`python-pdf-service`) e `nfe-radar` (`nfe-ingestion-service`, `cte-ingestion-service`, `boleto-ingestion-service`).
+**Deploy:** frontends → **Vercel** (auto via `main`). Workers Python → **Railway** (ver §1.1):
+`arruda-sales-boost` (`python-pdf-service`); `nfe-radar` (`nfe-ingestion-service`,
+`boleto-ingestion-service`, `cte-ingestion-service`). Novo job pesado/cron → Railway primeiro.
 
 ---
 
@@ -559,6 +595,7 @@ Este runbook é vivo. Quando:
 
 - Um novo MCP for instalado → atualizar §1.
 - Um novo padrão for promovido a ecossistema → adicionar em §5.
+- Nova armadilha ou regra de infra (Vercel/Supabase/Railway) → §1.1 e/ou §8.
 - Uma nova armadilha cross-project for descoberta → adicionar em §8.
 - Um novo ritual/acronym for proposto → adicionar em §2 com a mesma estrutura.
 
