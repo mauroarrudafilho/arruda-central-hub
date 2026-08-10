@@ -69,6 +69,24 @@ de vínculo; a camada de RBAC está dentro do helper. Conferir com
 descobriu que `get_acordos_where_filter` lê `rbac_*` **e** `usuarios_acordos`, e que ler só o
 predicado escondia a camada canônica.
 
+**Ao contar policies irrestritas, avaliar `qual` e `with_check` juntos.** Em policy de `INSERT`,
+`qual` é nulo **por definição** — a condição vive em `with_check`. Contar só `qual` classifica todo
+INSERT restritivo como irrestrito e produz alarme falso contra o próprio documento de referência:
+no `arruda-flow-buddy` a conta errada acusou **32** irrestritas no prefixo `finance_*`, contra as
+zero que o `THREAT_MODEL.md` de lá afirma — e as 32 eram INSERT com `with_check` restritivo. A
+consulta correta avalia os dois campos:
+
+```sql
+select count(*) from pg_policies
+where schemaname = 'public' and tablename like '<prefixo>\_%'
+  and coalesce(qual, 'true') = 'true'
+  and coalesce(with_check, 'true') = 'true';
+```
+
+Vale para auditoria de RLS de qualquer app do grupo. O `THREAT_MODEL.md` do `arruda-flow-buddy`
+(112 policies, zero irrestritas) é a referência do ecossistema — quem precisa de policy nova copia
+de lá, não do `logistics-arrudahub`.
+
 ---
 
 ## 1. Inventário de capacidades — MCPs disponíveis
@@ -581,6 +599,7 @@ Lista autoritativa: array `PROJECTS` do `./sync-agents.sh` (16 projetos).
 | logistics-arrudahub | `node scripts/dev.mjs` | 5173 | npm | `migration:ocorrencias`, `migration:lead-time`, `migration:rota-id`, `test`, `test:ui`, `test:coverage` |
 | nfe-radar | `npm run dev` (frontend) | 5173 | npm | Backend Python separado (Railway) |
 | portal-fornecedor | `npm run dev` | 3001 | npm | `test` |
+| portal-cliente | `npm run dev` | 3002 | npm | — |
 | route-planner | `npm run dev` | 5173 | npm | `tsc -b && vite build` |
 
 **Deploy:** frontends → **Vercel** (auto via `main`). Workers Python → **Railway** (ver §1.1):
