@@ -452,6 +452,10 @@ manteve o estado atual; medido em 2026-07-28 sobre ~1026 policies. Placar contí
  100 mil linhas isso é a diferença entre 1 e 100.000 execuções. **Estado (2026-07-29): 0 policies
  residuais** com `auth.uid()`/`auth.jwt()` cru (A03 PASS — migration `20260729190000`).
  Custo principal é em SELECT/UPDATE de varredura; não reintroduzir. Vale igual para `auth.jwt()`.
+ **Helpers STABLE em policy seguem a mesma regra:** `is_admin()` cru também reavalia por linha.
+ **Estado (2026-08-13): 425 policies** com `is_admin`/`is_leader`/… wrapped em `(SELECT fn())`
+ (migration `20260813190000`). Não reintroduzir helper cru; SRF no `FROM` (ex.:
+ `get_acordos_visiveis_atual()`) **não** se envolve em `SELECT`.
 2. **Helper de policy é `STABLE`, nunca `VOLATILE`.** `VOLATILE` impede o cache do planner e
  re-executa por linha, anulando a regra 1. **Estado (2026-07-28): `lms_is_admin`
  e `lms_is_admin_or_manager` já são `STABLE`.** Helper novo nasce `STABLE SECURITY DEFINER`
