@@ -524,6 +524,23 @@ ter 16 tabelas abertas e tem zero).
 
 ### 8.5 Build e ambiente
 
+- **`npx tsc --noEmit` não checa arquivo nenhum — nos 16 Ripples.** (flow-buddy, 2026-08-19)
+  O `tsconfig.json` da raiz de todos eles é *solution-style* (`"files": []` + `references`), então
+  o comando compila **zero** arquivos e sai com código 0. Sempre. Usar como prova de "typecheck
+  limpo" é auto-engano: no flow-buddy, o comando certo revelou **51 erros** que passavam
+  despercebidos.
+  - **Diagnóstico em 1 segundo:** `npx tsc --noEmit --listFiles | grep -c '/src/'` → **0 = armadilha**.
+  - **Correto:** `tsc -p tsconfig.app.json --noEmit` (nome pode variar por repo — conferir as
+    `references` do tsconfig raiz). Expor como script `typecheck` no `package.json`.
+  - **Verificado em 2026-08-19:** os **16** repos com `tsconfig.json` têm `"files": []`. Nenhum
+    está imune; o número de erros escondidos é que varia.
+- **`vite build` não verifica tipos.** O Vite/SWC remove os tipos sem checá-los. Se o deploy roda
+  só o build (padrão Vercel), tipo errado chega a produção. Só transformar `build` em
+  `tsc ... && vite build` **depois** de zerar a dívida — antes disso, o próximo push derruba o deploy.
+- **CI novo em repo com dívida herdada: bloqueie só o que já está verde.** (flow-buddy)
+  Testes e build bloqueiam; tipos e lint entram com `continue-on-error` e a contagem no
+  `$GITHUB_STEP_SUMMARY`. Um ✗ permanente na `main` treina o time a ignorar o sinal — é o único
+  jeito de um CI ficar **pior** que nenhum CI. Promover cada verificação quando ela zerar.
 - **Bun vs npm em flow-buddy.** → CI/CD usa Bun; não usar `npm install` (invalida lockfile).
 - **React Query subutilizado em logistics** — migração gradual, components novos já usam.
 - **Zustand sem memoization automática** → usar selectors `useStore(state => state.x)` para evitar re-render desnecessário.
